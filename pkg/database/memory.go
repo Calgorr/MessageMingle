@@ -16,7 +16,8 @@ func (i *in_memory) SaveMessage(msg broker.Message, subject string) int {
 	if i.messages[subject] == nil {
 		i.messages[subject] = make(map[int]broker.Message)
 	}
-	i.messages[subject][msg.ID] = msg
+	i.messages[subject][len(i.messages[subject])+1] = msg
+	msg.ID = len(i.messages[subject])
 	return msg.ID
 }
 
