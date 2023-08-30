@@ -45,6 +45,9 @@ func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message
 	}
 	msg.ID = m.db.SaveMessage(msg, subject)
 	go func() {
+		if msg.Expiration == 0 {
+			return
+		}
 		<-time.After(msg.Expiration)
 		msg.IsExpired = true
 	}()
