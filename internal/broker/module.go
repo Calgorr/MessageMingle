@@ -29,6 +29,7 @@ func (m *Module) Close() error {
 			close(ch)
 		}
 	}
+	m.isClosed = true
 	fmt.Println(m.subscribers)
 	return nil
 }
