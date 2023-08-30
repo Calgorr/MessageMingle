@@ -4,16 +4,19 @@ import (
 	"context"
 	"fmt"
 	"therealbroker/pkg/broker"
+	"therealbroker/pkg/database"
 )
 
 type Module struct {
 	isClosed    bool
 	subscribers map[string][]chan broker.Message
+	db          database.Database
 }
 
 func NewModule() broker.Broker {
 	return &Module{
 		subscribers: make(map[string][]chan broker.Message),
+		db:          database.NewInMemory(),
 	}
 }
 
@@ -36,6 +39,8 @@ func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message
 			listener <- msg
 		}(listener)
 	}
+	msg.ID = m.db.SaveMessage(msg, subject)
+	return msg.ID, nil
 }
 
 func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.Message, error) {
