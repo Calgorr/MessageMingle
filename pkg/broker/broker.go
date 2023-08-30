@@ -17,6 +17,8 @@ type Message struct {
 	// with the proper Message id
 	// 0 when there is no need to keep message ( fire & forget mode )
 	Expiration time.Duration
+	// If the message is expired, this field should be true
+	IsExpired bool
 }
 
 // The whole implementation should be thread-safe

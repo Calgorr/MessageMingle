@@ -23,6 +23,9 @@ func (i *in_memory) SaveMessage(msg broker.Message, subject string) int {
 
 func (i *in_memory) FetchMessage(id int, subject string) (broker.Message, error) {
 	msg := i.messages[subject][id]
+	if msg.IsExpired {
+		return broker.Message{}, broker.ErrExpiredID
+	}
 	return msg, nil
 }
 
