@@ -3,7 +3,6 @@ package database
 import "therealbroker/pkg/broker"
 
 type Database interface {
-	SaveMessage(msg broker.Message, subject string) int
-	FetchMessage(id int, subject string) (broker.Message, error)
-	DeleteMessage(id int, subject string) error
+	SaveMessage(msg *broker.Message, subject string) int
+	FetchMessage(id int, subject string) (*broker.Message, error)
 }

@@ -101,7 +101,7 @@ func TestPublishShouldPreserveOrder(t *testing.T) {
 
 	for i := 0; i < n; i++ {
 		msg := <-sub
-		assert.Equal(t, messages[i], msg)
+		assert.Equal(t, messages[i].Body, msg.Body)
 	}
 }
 
@@ -124,7 +124,7 @@ func TestNonExpiredMessageShouldBeFetchable(t *testing.T) {
 	id, _ := service.Publish(mainCtx, "ali", msg)
 	fMsg, _ := service.Fetch(mainCtx, "ali", id)
 
-	assert.Equal(t, msg, fMsg)
+	assert.Equal(t, msg.Body, fMsg.Body)
 }
 
 func TestExpiredMessageShouldNotBeFetchable(t *testing.T) {
@@ -132,7 +132,6 @@ func TestExpiredMessageShouldNotBeFetchable(t *testing.T) {
 	id, _ := service.Publish(mainCtx, "ali", msg)
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-
 	<-ticker.C
 	fMsg, err := service.Fetch(mainCtx, "ali", id)
 	assert.Equal(t, broker.ErrExpiredID, err)

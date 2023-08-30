@@ -35,15 +35,21 @@ func (m *Module) Close() error {
 }
 
 func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message) (int, error) {
+	m.ListenersLock.Lock()
+	defer m.ListenersLock.Unlock()
 	if m.isClosed {
 		return 0, broker.ErrUnavailable
 	}
+	var wg sync.WaitGroup
 	for _, listener := range m.subscribers[subject] {
+		wg.Add(1)
 		go func(listener chan broker.Message) {
+			defer wg.Done()
 			listener <- msg
 		}(listener)
 	}
-	msg.ID = m.db.SaveMessage(msg, subject)
+	wg.Wait()
+	msg.ID = m.db.SaveMessage(&msg, subject)
 	go func() {
 		if msg.Expiration == 0 {
 			return
@@ -55,6 +61,8 @@ func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message
 }
 
 func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.Message, error) {
+	m.ListenersLock.Lock()
+	defer m.ListenersLock.Unlock()
 	if m.isClosed {
 		return nil, broker.ErrUnavailable
 	}
@@ -62,16 +70,16 @@ func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.M
 	case <-ctx.Done():
 		return nil, broker.ErrCancelled
 	default:
-		ch := make(chan broker.Message)
-		m.ListenersLock.Lock()
+		ch := make(chan broker.Message, 1000)
 		m.subscribers[subject] = append(m.subscribers[subject], ch)
-		m.ListenersLock.Unlock()
 		return ch, nil
 	}
 
 }
 
 func (m *Module) Fetch(ctx context.Context, subject string, id int) (broker.Message, error) {
+	m.ListenersLock.Lock()
+	defer m.ListenersLock.Unlock()
 	if m.isClosed {
 		return broker.Message{}, broker.ErrUnavailable
 	}
@@ -82,5 +90,5 @@ func (m *Module) Fetch(ctx context.Context, subject string, id int) (broker.Mess
 	if msg.IsExpired {
 		return broker.Message{}, broker.ErrExpiredID
 	}
-	return msg, nil
+	return *msg, nil
 }
