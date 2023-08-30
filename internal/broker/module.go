@@ -7,6 +7,7 @@ import (
 )
 
 type Module struct {
+	isClosed    bool
 	subscribers map[string][]chan broker.Message
 }
 
@@ -23,12 +24,18 @@ func (m *Module) Close() error {
 		}
 	}
 	fmt.Println(m.subscribers)
-	m = nil
 	return nil
 }
 
 func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message) (int, error) {
-	panic("implement me")
+	if m.isClosed {
+		return 0, broker.ErrUnavailable
+	}
+	for _, listener := range m.subscribers[subject] {
+		go func(listener chan broker.Message) {
+			listener <- msg
+		}(listener)
+	}
 }
 
 func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.Message, error) {
