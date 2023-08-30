@@ -11,4 +11,6 @@ var (
 	// Use this error when message had been published, but it is not
 	// available anymore because the expiration time has reached.
 	ErrExpiredID = errors.New("message with id provided is expired")
+	// Use this error when the context is cancelled
+	ErrCancelled = errors.New("context is cancelled")
 )
