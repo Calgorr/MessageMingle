@@ -2,19 +2,29 @@ package broker
 
 import (
 	"context"
+	"fmt"
 	"therealbroker/pkg/broker"
 )
 
 type Module struct {
-	// TODO: Add required fields
+	subscribers map[string][]chan broker.Message
 }
 
 func NewModule() broker.Broker {
-	return &Module{}
+	return &Module{
+		subscribers: make(map[string][]chan broker.Message),
+	}
 }
 
 func (m *Module) Close() error {
-	panic("implement me")
+	for _, v := range m.subscribers {
+		for _, ch := range v {
+			close(ch)
+		}
+	}
+	fmt.Println(m.subscribers)
+	m = nil
+	return nil
 }
 
 func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message) (int, error) {
