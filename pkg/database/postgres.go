@@ -15,38 +15,38 @@ type postgresDatabase struct {
 
 const (
 	host     = "localhost"
-	port     = 5432
+	port     = 8080
 	user     = "postgres"
 	password = "postgres"
 	dbname   = "broker"
 )
 
-func NewPostgresDatabase() (Database, error) {
+func NewPostgresDatabase() Database {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	err = db.Ping()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	return &postgresDatabase{db: db}, nil
+	return &postgresDatabase{db: db}
 }
 
 func (p *postgresDatabase) SaveMessage(msg *broker.Message, subject string) int {
 	expirationDate := time.Now().Add(msg.Expiration)
-	result, err := p.db.Exec(
-		"INSERT INTO message_broker (subject, body, expiration, expirationduration) VALUES ($1, $2, $3, $4)",
-		subject, msg.Body, expirationDate, msg.Expiration,
-	)
+	var id int
+	err := p.db.QueryRow(
+		"INSERT INTO message_broker (subject, body, expiration, expirationduration) VALUES ($1, $2, $3, $4) RETURNING id",
+		subject, msg.Body, expirationDate, msg.Expiration/1000,
+	).Scan(&id)
 	if err != nil {
 		panic(err)
 	}
-	id, _ := result.LastInsertId()
-	return int(id)
+	return id
 }
 
 func (p *postgresDatabase) FetchMessage(id int, subject string) (*broker.Message, error) {
