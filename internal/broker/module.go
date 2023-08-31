@@ -2,12 +2,13 @@ package broker
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"therealbroker/pkg/broker"
 	"therealbroker/pkg/database"
 	"time"
 )
+
+var mainService *Module
 
 type Module struct {
 	isClosed      bool
@@ -17,10 +18,15 @@ type Module struct {
 }
 
 func NewModule() broker.Broker {
-	return &Module{
-		subscribers: make(map[string][]chan broker.Message),
-		db:          database.NewInMemory(),
+	if mainService == nil {
+		mainService := &Module{
+			subscribers: make(map[string][]chan broker.Message),
+			db:          database.NewPostgresDatabase(),
+		}
+		return mainService
 	}
+	mainService.isClosed = false
+	return mainService
 }
 
 func (m *Module) Close() error {
@@ -30,7 +36,6 @@ func (m *Module) Close() error {
 		}
 	}
 	m.isClosed = true
-	fmt.Println(m.subscribers)
 	return nil
 }
 
@@ -70,7 +75,7 @@ func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.M
 	case <-ctx.Done():
 		return nil, broker.ErrCancelled
 	default:
-		ch := make(chan broker.Message, 1000)
+		ch := make(chan broker.Message, 100000)
 		m.subscribers[subject] = append(m.subscribers[subject], ch)
 		return ch, nil
 	}

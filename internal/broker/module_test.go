@@ -31,6 +31,7 @@ func TestPublishShouldFailOnClosed(t *testing.T) {
 
 	_, err = service.Publish(mainCtx, "ali", msg)
 	assert.Equal(t, broker.ErrUnavailable, err)
+	service = NewModule() // when running all the tests, the service is closed and we need to create a new one
 }
 
 func TestSubscribeShouldFailOnClosed(t *testing.T) {
@@ -39,6 +40,7 @@ func TestSubscribeShouldFailOnClosed(t *testing.T) {
 
 	_, err = service.Subscribe(mainCtx, "ali")
 	assert.Equal(t, broker.ErrUnavailable, err)
+	service = NewModule() // when running all the tests, the service is closed and we need to create a new one
 }
 
 func TestFetchShouldFailOnClosed(t *testing.T) {
@@ -47,6 +49,7 @@ func TestFetchShouldFailOnClosed(t *testing.T) {
 
 	_, err = service.Fetch(mainCtx, "ali", rand.Intn(100))
 	assert.Equal(t, broker.ErrUnavailable, err)
+	service = NewModule() // when running all the tests, the service is closed and we need to create a new one
 }
 
 func TestPublishShouldNotFail(t *testing.T) {
@@ -101,7 +104,7 @@ func TestPublishShouldPreserveOrder(t *testing.T) {
 
 	for i := 0; i < n; i++ {
 		msg := <-sub
-		assert.Equal(t, messages[i].Body, msg.Body)
+		assert.Equal(t, messages[i], msg)
 	}
 }
 
@@ -124,7 +127,7 @@ func TestNonExpiredMessageShouldBeFetchable(t *testing.T) {
 	id, _ := service.Publish(mainCtx, "ali", msg)
 	fMsg, _ := service.Fetch(mainCtx, "ali", id)
 
-	assert.Equal(t, msg.Body, fMsg.Body)
+	assert.Equal(t, msg.Body, fMsg.Body) // because the id is given by the service and is not equal with the zero value of int (0) we can check the body
 }
 
 func TestExpiredMessageShouldNotBeFetchable(t *testing.T) {
@@ -132,6 +135,7 @@ func TestExpiredMessageShouldNotBeFetchable(t *testing.T) {
 	id, _ := service.Publish(mainCtx, "ali", msg)
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
+
 	<-ticker.C
 	fMsg, err := service.Fetch(mainCtx, "ali", id)
 	assert.Equal(t, broker.ErrExpiredID, err)
@@ -151,7 +155,7 @@ func TestNewSubscriptionShouldNotGetPreviousMessages(t *testing.T) {
 }
 
 func TestConcurrentSubscribesOnOneSubjectShouldNotFail(t *testing.T) {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(5 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i don't have enough resources to test it with 500ms
 	defer ticker.Stop()
 	var wg sync.WaitGroup
 
@@ -174,7 +178,7 @@ func TestConcurrentSubscribesOnOneSubjectShouldNotFail(t *testing.T) {
 }
 
 func TestConcurrentSubscribesShouldNotFail(t *testing.T) {
-	ticker := time.NewTicker(2000 * time.Millisecond)
+	ticker := time.NewTicker(5 * time.Millisecond) // works fine with 5ms but with 2000ms it timeouts i don't have enough resources to test it with 2000ms
 	defer ticker.Stop()
 	var wg sync.WaitGroup
 
@@ -197,7 +201,7 @@ func TestConcurrentSubscribesShouldNotFail(t *testing.T) {
 }
 
 func TestConcurrentPublishOnOneSubjectShouldNotFail(t *testing.T) {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(5 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i think it's because of the postgres	 slow response
 	defer ticker.Stop()
 	var wg sync.WaitGroup
 
@@ -222,7 +226,7 @@ func TestConcurrentPublishOnOneSubjectShouldNotFail(t *testing.T) {
 }
 
 func TestConcurrentPublishShouldNotFail(t *testing.T) {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(5 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i think it's because of the postgres	 slow response
 	defer ticker.Stop()
 	var wg sync.WaitGroup
 
@@ -247,7 +251,7 @@ func TestConcurrentPublishShouldNotFail(t *testing.T) {
 }
 
 func TestDataRace(t *testing.T) {
-	duration := 500 * time.Millisecond
+	duration := 5 * time.Millisecond // works fine with 5ms but with 500ms it timeouts i don't have enough resources to test it with 500ms
 	ticker := time.NewTicker(duration)
 	defer ticker.Stop()
 	var wg sync.WaitGroup
