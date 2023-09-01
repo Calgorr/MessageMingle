@@ -24,10 +24,26 @@ func (s *brokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 	return &pb.PublishResponse{Id: int32(id)}, nil
 }
 
-func (s *brokerServer) Subscribe(*pb.SubscribeRequest, pb.Broker_SubscribeServer) error {
-	return nil
+func (s *brokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
+	ch, err := s.BrokerInstance.Subscribe(server.Context(), request.GetSubject())
+	if err != nil {
+		return err
+	}
+	for {
+		select {
+		case <-server.Context().Done():
+			return nil
+		case msg, closed := <-ch:
+			if closed {
+				return nil
+			}
+			if err := server.Send(&pb.MessageResponse{Body: []byte(msg.Body)}); err != nil {
+				return err
+			}
+		}
+	}
 }
 
-func (s *brokerServer) Fetch(context.Context, *pb.FetchRequest) (*pb.MessageResponse, error) {
+func (s *brokerServer) Fetch(xtx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
 	return nil, nil
 }
