@@ -30,7 +30,7 @@ func (c *cassandraDatabase) SaveMessage(msg *broker.Message, subject string) int
 	expirationDate := time.Now().Add(msg.Expiration)
 	query := c.session.Query(
 		"INSERT INTO message_broker (id, subject, body, expiration, expirationduration) VALUES (?, ?, ?, ?, ?)",
-		gocql.TimeUUID(), subject, msg.Body, expirationDate, msg.Expiration/1000,
+		gocql.TimeUUID(), subject, msg.Body, expirationDate, msg.Expiration,
 	)
 	if err := query.Exec(); err != nil {
 		panic(err)

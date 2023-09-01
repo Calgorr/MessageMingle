@@ -41,7 +41,7 @@ func (p *postgresDatabase) SaveMessage(msg *broker.Message, subject string) int 
 	var id int
 	err := p.db.QueryRow(
 		"INSERT INTO message_broker (subject, body, expiration, expirationduration) VALUES ($1, $2, $3, $4) RETURNING id",
-		subject, msg.Body, expirationDate, msg.Expiration/1000,
+		subject, msg.Body, expirationDate, msg.Expiration,
 	).Scan(&id)
 	if err != nil {
 		panic(err)
