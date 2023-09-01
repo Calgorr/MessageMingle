@@ -44,6 +44,10 @@ func (s *brokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 	}
 }
 
-func (s *brokerServer) Fetch(xtx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
-	return nil, nil
+func (s *brokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
+	msg, err := s.BrokerInstance.Fetch(ctx, request.GetSubject(), int(request.GetId()))
+	if err != nil {
+		return nil, err
+	}
+	return &pb.MessageResponse{Body: []byte(msg.Body)}, nil
 }
