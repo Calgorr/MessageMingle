@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-type brokerServer struct {
+type BrokerServer struct {
 	pb.UnimplementedBrokerServer
 	BrokerInstance broker.Broker
 }
 
-func (s *brokerServer) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
+func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
 	msg := broker.Message{
 		Body:       string(request.GetBody()),
 		Expiration: time.Duration(request.GetExpirationSeconds()),
@@ -24,14 +24,15 @@ func (s *brokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 	return &pb.PublishResponse{Id: int32(id)}, nil
 }
 
-func (s *brokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
+func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
 	ch, err := s.BrokerInstance.Subscribe(server.Context(), request.GetSubject())
 	if err != nil {
 		return err
 	}
+	ctx := server.Context()
 	for {
 		select {
-		case <-server.Context().Done():
+		case <-ctx.Done():
 			return nil
 		case msg, closed := <-ch:
 			if closed {
@@ -44,7 +45,7 @@ func (s *brokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 	}
 }
 
-func (s *brokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
+func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
 	msg, err := s.BrokerInstance.Fetch(ctx, request.GetSubject(), int(request.GetId()))
 	if err != nil {
 		return nil, err
