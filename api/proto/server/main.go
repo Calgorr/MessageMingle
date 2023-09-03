@@ -23,4 +23,5 @@ func main() {
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("Server serve failed: %v", err)
 	}
+	//starting the prometheus server
 }
