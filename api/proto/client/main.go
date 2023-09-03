@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -65,7 +64,6 @@ func Publish(ctx context.Context, client pb.BrokerClient) {
 }
 
 func Subscribe(ctx context.Context, client pb.BrokerClient) {
-	//fmt.Println("Subscribe")
 	stream, err := client.Subscribe(ctx, &pb.SubscribeRequest{Subject: "test"})
 	if err != nil {
 		log.Fatalf("Subscribe error: %v", err)
@@ -81,7 +79,7 @@ out:
 				break out
 			}
 			if err != nil {
-				fmt.Println(err)
+				log.Fatalf("Subscribe error: %v", err)
 			}
 			log.Println(msg)
 		}
