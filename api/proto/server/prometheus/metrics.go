@@ -1,6 +1,11 @@
 package prometheus
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
 
 var (
 	MethodCount = prometheus.NewCounterVec(
@@ -25,3 +30,7 @@ var (
 		},
 	)
 )
+
+func PrometheusHandler() http.Handler {
+	return promhttp.Handler()
+}
