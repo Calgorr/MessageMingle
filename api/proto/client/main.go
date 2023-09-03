@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -26,8 +27,8 @@ func main() {
 	defer conn.Close()
 	client := pb.NewBrokerClient(conn)
 	ctx := context.Background()
-	var wg *sync.WaitGroup
-	wg.Add(3)
+	var wg sync.WaitGroup
+	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		Publish(ctx, client)
@@ -36,10 +37,10 @@ func main() {
 		defer wg.Done()
 		Subscribe(ctx, client)
 	}()
-	go func() {
-		defer wg.Done()
-		Fetch(ctx, client)
-	}()
+	// go func() {
+	// 	defer wg.Done()
+	// 	Fetch(ctx, client)
+	// }()
 	wg.Wait()
 }
 
@@ -64,10 +65,12 @@ func Publish(ctx context.Context, client pb.BrokerClient) {
 }
 
 func Subscribe(ctx context.Context, client pb.BrokerClient) {
+	//fmt.Println("Subscribe")
 	stream, err := client.Subscribe(ctx, &pb.SubscribeRequest{Subject: "test"})
 	if err != nil {
 		log.Fatalf("Subscribe error: %v", err)
 	}
+out:
 	for {
 		select {
 		case <-ctx.Done():
@@ -75,10 +78,10 @@ func Subscribe(ctx context.Context, client pb.BrokerClient) {
 		default:
 			msg, err := stream.Recv()
 			if err == io.EOF {
-				break
+				break out
 			}
 			if err != nil {
-				log.Fatalf("Subscribe error: %v", err)
+				fmt.Println(err)
 			}
 			log.Println(msg)
 		}

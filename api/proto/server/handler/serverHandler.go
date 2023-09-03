@@ -45,11 +45,11 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 			prm.ActiveSubscribers.Dec()
 			prm.MethodCount.WithLabelValues("Subscribe", "success").Inc()
 			return nil
-		case msg, closed := <-ch:
-			if closed {
+		case msg, open := <-ch:
+			if !open {
 				prm.ActiveSubscribers.Dec()
 				prm.MethodCount.WithLabelValues("Subscribe", "success").Inc()
-				return nil
+				return err
 			}
 			if err := server.Send(&pb.MessageResponse{Body: []byte(msg.Body)}); err != nil {
 				prm.MethodCount.WithLabelValues("Subscribe", "failed").Inc()
