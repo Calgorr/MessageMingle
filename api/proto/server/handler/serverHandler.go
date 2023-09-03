@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	pb "therealbroker/api/proto/protoGen"
+	prm "therealbroker/api/proto/server/prometheus"
 	"therealbroker/pkg/broker"
 	"time"
 )
@@ -13,6 +14,8 @@ type BrokerServer struct {
 }
 
 func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
+	startTime := time.Now()
+	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	msg := broker.Message{
 		Body:       string(request.GetBody()),
 		Expiration: time.Duration(request.GetExpirationSeconds()),
