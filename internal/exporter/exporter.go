@@ -11,6 +11,13 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
+var (
+	DefaultCollectorEndpoint = "localhost:14268"
+	DefaultServiceName       = "therealbroker"
+	DefaultServiceVersion    = "0.0.1"
+	DefaultEnvironment       = "development"
+)
+
 // Config holds configuration parameters for the exporter.
 type Config struct {
 	CollectorEndpoint string
@@ -47,10 +54,10 @@ func newTraceProvider(exporter trace.SpanExporter, config *Config) (*trace.Trace
 func Register(config *Config) error {
 	if config == nil {
 		config = &Config{
-			CollectorEndpoint: "localhost:14268",
-			ServiceName:       "therealbroker",
-			ServiceVersion:    "0.0.1",
-			Environment:       "development",
+			CollectorEndpoint: DefaultCollectorEndpoint,
+			ServiceName:       DefaultServiceName,
+			ServiceVersion:    DefaultServiceVersion,
+			Environment:       DefaultEnvironment,
 		}
 	}
 	exp, err := newExporter(config)

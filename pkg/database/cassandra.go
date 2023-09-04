@@ -1,10 +1,13 @@
 package database
 
 import (
+	"context"
+	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
 	"time"
 
 	"github.com/gocql/gocql"
+	"go.opentelemetry.io/otel"
 )
 
 type cassandraDatabase struct {
@@ -27,6 +30,8 @@ func NewCassandraDatabase() Database {
 }
 
 func (c *cassandraDatabase) SaveMessage(msg *broker.Message, subject string) int {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "SaveMessageCassandra method")
+	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
 	query := c.session.Query(
 		"INSERT INTO message_broker (id, subject, body, expiration, expirationduration) VALUES (?, ?, ?, ?, ?)",
@@ -39,6 +44,8 @@ func (c *cassandraDatabase) SaveMessage(msg *broker.Message, subject string) int
 }
 
 func (c *cassandraDatabase) FetchMessage(id int, subject string) (*broker.Message, error) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "FetchCassandra method")
+	defer globalSpan.End()
 	var body string
 	var expiration time.Time
 	var expirationDuration time.Duration

@@ -1,12 +1,15 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
 	"time"
 
 	_ "github.com/lib/pq"
+	"go.opentelemetry.io/otel"
 )
 
 type postgresDatabase struct {
@@ -37,6 +40,8 @@ func NewPostgresDatabase() Database {
 }
 
 func (p *postgresDatabase) SaveMessage(msg *broker.Message, subject string) int {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "SaveMessagePostgres method")
+	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
 	var id int
 	err := p.db.QueryRow(
@@ -50,6 +55,8 @@ func (p *postgresDatabase) SaveMessage(msg *broker.Message, subject string) int 
 }
 
 func (p *postgresDatabase) FetchMessage(id int, subject string) (*broker.Message, error) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "FetchMessagePostgres method")
+	defer globalSpan.End()
 	var body string
 	var expiration time.Time
 	var expirationDuration time.Duration

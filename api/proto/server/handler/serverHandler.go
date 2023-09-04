@@ -36,7 +36,7 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 }
 
 func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
-	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(server.Context(), "publish method")
+	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(server.Context(), "Subscribe method")
 	defer globalSpan.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
@@ -68,7 +68,7 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 }
 
 func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
-	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(ctx, "publish method")
+	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(ctx, "Fetch method")
 	defer globalSpan.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())

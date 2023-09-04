@@ -3,9 +3,12 @@ package broker
 import (
 	"context"
 	"sync"
+	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
 	"therealbroker/pkg/database"
 	"time"
+
+	"go.opentelemetry.io/otel"
 )
 
 var mainService *Module
@@ -40,6 +43,8 @@ func (m *Module) Close() error {
 }
 
 func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message) (int, error) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Publish broker method")
+	defer globalSpan.End()
 	m.ListenersLock.Lock()
 	defer m.ListenersLock.Unlock()
 	if m.isClosed {
@@ -66,6 +71,8 @@ func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message
 }
 
 func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.Message, error) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Subscribe broker method")
+	defer globalSpan.End()
 	m.ListenersLock.Lock()
 	defer m.ListenersLock.Unlock()
 	if m.isClosed {
@@ -83,6 +90,8 @@ func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.M
 }
 
 func (m *Module) Fetch(ctx context.Context, subject string, id int) (broker.Message, error) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Fetch broker method")
+	defer globalSpan.End()
 	m.ListenersLock.Lock()
 	defer m.ListenersLock.Unlock()
 	if m.isClosed {
