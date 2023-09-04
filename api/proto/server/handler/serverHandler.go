@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 	pb "therealbroker/api/proto/protoGen"
-	prm "therealbroker/api/proto/server/prometheus"
+	prm "therealbroker/internal/prometheus"
 	"therealbroker/pkg/broker"
 	"time"
 )

@@ -10,20 +10,12 @@ import (
 	"therealbroker/api/proto/server/handler"
 	"therealbroker/internal/broker"
 
-	prm "therealbroker/api/proto/server/prometheus"
+	prm "therealbroker/internal/prometheus"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 )
-
-func prometheusServerStart() {
-	prometheus.MustRegister(prm.MethodDuration)
-	prometheus.MustRegister(prm.MethodCount)
-	prometheus.MustRegister(prm.ActiveSubscribers)
-	http.Handle("/metrics", promhttp.Handler())
-	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%d", 9091), nil))
-}
 
 func main() {
 	go func() {
@@ -40,4 +32,12 @@ func main() {
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("Server serve failed: %v", err)
 	}
+}
+
+func prometheusServerStart() {
+	prometheus.MustRegister(prm.MethodDuration)
+	prometheus.MustRegister(prm.MethodCount)
+	prometheus.MustRegister(prm.ActiveSubscribers)
+	http.Handle("/metrics", promhttp.Handler())
+	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%d", 9091), nil))
 }
