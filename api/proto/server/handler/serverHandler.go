@@ -3,17 +3,23 @@ package handler
 import (
 	"context"
 	pb "therealbroker/api/proto/protoGen"
+	"therealbroker/internal/exporter"
 	prm "therealbroker/internal/prometheus"
 	"therealbroker/pkg/broker"
 	"time"
+
+	"go.opentelemetry.io/otel"
 )
 
 type BrokerServer struct {
 	pb.UnimplementedBrokerServer
 	BrokerInstance broker.Broker
+	Config         *exporter.Config
 }
 
 func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
+	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(ctx, "publish method")
+	defer globalSpan.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	msg := broker.Message{
@@ -30,6 +36,8 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 }
 
 func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
+	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(server.Context(), "publish method")
+	defer globalSpan.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	ch, err := s.BrokerInstance.Subscribe(server.Context(), request.GetSubject())
@@ -60,6 +68,8 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 }
 
 func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
+	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(ctx, "publish method")
+	defer globalSpan.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	msg, err := s.BrokerInstance.Fetch(ctx, request.GetSubject(), int(request.GetId()))
