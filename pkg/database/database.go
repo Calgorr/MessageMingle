@@ -1,8 +1,11 @@
 package database
 
-import "therealbroker/pkg/broker"
+import (
+	"context"
+	"therealbroker/pkg/broker"
+)
 
 type Database interface {
-	SaveMessage(msg *broker.Message, subject string) int
-	FetchMessage(id int, subject string) (*broker.Message, error)
+	SaveMessage(ctx context.Context, msg *broker.Message, subject string) int
+	FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error)
 }

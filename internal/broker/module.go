@@ -43,8 +43,8 @@ func (m *Module) Close() error {
 }
 
 func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message) (int, error) {
-	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Publish broker method")
-	defer globalSpan.End()
+	_, span := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Publish broker method")
+	defer span.End()
 	m.ListenersLock.Lock()
 	defer m.ListenersLock.Unlock()
 	if m.isClosed {
@@ -59,7 +59,7 @@ func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message
 		}(listener)
 	}
 	wg.Wait()
-	msg.ID = m.db.SaveMessage(&msg, subject)
+	msg.ID = m.db.SaveMessage(ctx, &msg, subject)
 	go func() {
 		if msg.Expiration == 0 {
 			return
@@ -97,7 +97,7 @@ func (m *Module) Fetch(ctx context.Context, subject string, id int) (broker.Mess
 	if m.isClosed {
 		return broker.Message{}, broker.ErrUnavailable
 	}
-	msg, err := m.db.FetchMessage(id, subject)
+	msg, err := m.db.FetchMessage(ctx, id, subject)
 	if err != nil {
 		return broker.Message{}, err
 	}

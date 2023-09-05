@@ -29,7 +29,7 @@ func NewCassandraDatabase() Database {
 	return &cassandraDatabase{session: session}
 }
 
-func (c *cassandraDatabase) SaveMessage(msg *broker.Message, subject string) int {
+func (c *cassandraDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "SaveMessageCassandra method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
@@ -43,7 +43,7 @@ func (c *cassandraDatabase) SaveMessage(msg *broker.Message, subject string) int
 	return 0
 }
 
-func (c *cassandraDatabase) FetchMessage(id int, subject string) (*broker.Message, error) {
+func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "FetchCassandra method")
 	defer globalSpan.End()
 	var body string

@@ -14,19 +14,18 @@ import (
 type BrokerServer struct {
 	pb.UnimplementedBrokerServer
 	BrokerInstance broker.Broker
-	Config         *exporter.Config
 }
 
 func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
-	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(ctx, "publish method")
-	defer globalSpan.End()
+	spanCtx, span := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "publish method")
+	defer span.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	msg := broker.Message{
 		Body:       string(request.GetBody()),
 		Expiration: time.Duration(request.GetExpirationSeconds()),
 	}
-	id, err := s.BrokerInstance.Publish(ctx, request.GetSubject(), msg)
+	id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), msg)
 	if err != nil {
 		prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
 		return nil, err
@@ -36,11 +35,11 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 }
 
 func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
-	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(server.Context(), "Subscribe method")
-	defer globalSpan.End()
+	spanCtx, span := otel.Tracer(exporter.DefaultServiceName).Start(server.Context(), "Subscribe method")
+	defer span.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
-	ch, err := s.BrokerInstance.Subscribe(server.Context(), request.GetSubject())
+	ch, err := s.BrokerInstance.Subscribe(spanCtx, request.GetSubject())
 	prm.ActiveSubscribers.Inc()
 	if err != nil {
 		prm.MethodCount.WithLabelValues("Subscribe", "failed").Inc()
@@ -68,11 +67,11 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 }
 
 func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
-	_, globalSpan := otel.Tracer(s.Config.ServiceName).Start(ctx, "Fetch method")
-	defer globalSpan.End()
+	spanCtx, span := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Fetch method")
+	defer span.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
-	msg, err := s.BrokerInstance.Fetch(ctx, request.GetSubject(), int(request.GetId()))
+	msg, err := s.BrokerInstance.Fetch(spanCtx, request.GetSubject(), int(request.GetId()))
 	if err != nil {
 		prm.MethodCount.WithLabelValues("Fetch", "failed").Inc()
 		return nil, err

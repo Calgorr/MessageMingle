@@ -51,14 +51,12 @@ func newTraceProvider(exporter trace.SpanExporter, config *Config) (*trace.Trace
 
 // Register registers the exporter as the global trace provider.
 // If config is nil, default values will be used.
-func Register(config *Config) error {
-	if config == nil {
-		config = &Config{
-			CollectorEndpoint: DefaultCollectorEndpoint,
-			ServiceName:       DefaultServiceName,
-			ServiceVersion:    DefaultServiceVersion,
-			Environment:       DefaultEnvironment,
-		}
+func Register() error {
+	config := &Config{
+		CollectorEndpoint: DefaultCollectorEndpoint,
+		ServiceName:       DefaultServiceName,
+		ServiceVersion:    DefaultServiceVersion,
+		Environment:       DefaultEnvironment,
 	}
 	exp, err := newExporter(config)
 	if err != nil {

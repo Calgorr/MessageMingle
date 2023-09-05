@@ -39,7 +39,7 @@ func NewPostgresDatabase() Database {
 	return &postgresDatabase{db: db}
 }
 
-func (p *postgresDatabase) SaveMessage(msg *broker.Message, subject string) int {
+func (p *postgresDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "SaveMessagePostgres method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
@@ -54,7 +54,7 @@ func (p *postgresDatabase) SaveMessage(msg *broker.Message, subject string) int 
 	return id
 }
 
-func (p *postgresDatabase) FetchMessage(id int, subject string) (*broker.Message, error) {
+func (p *postgresDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "FetchMessagePostgres method")
 	defer globalSpan.End()
 	var body string
