@@ -27,40 +27,35 @@ func main() {
 	client := pb.NewBrokerClient(conn)
 	ctx := context.Background()
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		Publish(ctx, client)
 	}()
-	go func() {
-		defer wg.Done()
-		Subscribe(ctx, client)
-	}()
-	// go func() {
-	// 	defer wg.Done()
-	// 	Fetch(ctx, client)
-	// }()
 	wg.Wait()
 }
 
 func Publish(ctx context.Context, client pb.BrokerClient) {
-	ticker := time.NewTicker(20 * time.Millisecond)
+	var wg sync.WaitGroup
+	ticker := time.NewTicker(1000 * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			_, err := client.Publish(ctx, &pb.PublishRequest{
-				Subject:           "test",
-				Body:              []byte(randomString(10)),
-				ExpirationSeconds: 0,
-			})
-			if err != nil {
-				log.Printf("Publish error: %v", err)
-			}
+			wg.Wait()
+			return
+		default:
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_, err := client.Publish(ctx, &pb.PublishRequest{Subject: "test", Body: []byte(randomString(10)), ExpirationSeconds: 10})
+				if err != nil {
+					log.Printf("Publish error: %v", err)
+				}
+			}()
 		}
 	}
-
 }
 
 func Subscribe(ctx context.Context, client pb.BrokerClient) {

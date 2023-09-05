@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 	pb "therealbroker/api/proto/protoGen"
 	"therealbroker/internal/exporter"
 	prm "therealbroker/internal/prometheus"
@@ -25,6 +26,7 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 		Body:       string(request.GetBody()),
 		Expiration: time.Duration(request.GetExpirationSeconds()),
 	}
+	log.Println(msg)
 	id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), msg)
 	if err != nil {
 		prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
