@@ -4,6 +4,7 @@ import (
 	"context"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
+	"therealbroker/pkg/uuidmapper"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -30,27 +31,29 @@ func NewCassandraDatabase() Database {
 }
 
 func (c *cassandraDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
-	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "SaveMessageCassandra method")
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageCassandra method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
+	uuid := gocql.TimeUUID()
+	numid := uuidmapper.MapTimeUUIDToInt(uuid)
 	query := c.session.Query(
-		"INSERT INTO message_broker (id, subject, body, expiration, expirationduration) VALUES (?, ?, ?, ?, ?)",
-		gocql.TimeUUID(), subject, msg.Body, expirationDate, msg.Expiration,
+		"INSERT INTO message_broker (id, subject, body, expiration, expirationduration, numid) VALUES (?, ?, ?, ?, ?, ?)",
+		uuid, subject, msg.Body, expirationDate, msg.Expiration, numid,
 	)
 	if err := query.Exec(); err != nil {
 		panic(err)
 	}
-	return 0
+	return numid
 }
 
 func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {
-	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(context.Background(), "FetchCassandra method")
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "FetchCassandra method")
 	defer globalSpan.End()
 	var body string
 	var expiration time.Time
 	var expirationDuration time.Duration
 	query := c.session.Query(
-		"SELECT body, expiration, expirationduration FROM message_broker WHERE id = ? AND subject = ?",
+		"SELECT body, expiration, expirationduration FROM message_broker WHERE numid = ? AND subject = ?",
 		id, subject,
 	)
 	if err := query.Scan(&body, &expiration, &expirationDuration); err != nil {
