@@ -2,18 +2,46 @@ package handler
 
 import (
 	"context"
+	"log"
+	"net"
 	pb "therealbroker/api/proto/protoGen"
+	"therealbroker/api/proto/server/trace"
+	brk "therealbroker/internal/broker"
 	"therealbroker/internal/exporter"
 	prm "therealbroker/internal/prometheus"
 	"therealbroker/pkg/broker"
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"google.golang.org/grpc"
 )
 
 type BrokerServer struct {
 	pb.UnimplementedBrokerServer
 	BrokerInstance broker.Broker
+}
+
+func StartServer() {
+	go func() {
+		trace.PrometheusServerStart()
+	}()
+	go func() {
+		err := trace.JaegerRegister()
+		if err != nil {
+			log.Fatalf("Jaeger failed: %v", err)
+		}
+	}()
+	lis, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	server := grpc.NewServer()
+	pb.RegisterBrokerServer(server, &BrokerServer{
+		BrokerInstance: brk.NewModule(),
+	})
+	if err := server.Serve(lis); err != nil {
+		log.Fatalf("Server serve failed: %v", err)
+	}
 }
 
 func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {

@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func prometheusServerStart() {
+func PrometheusServerStart() {
 	prometheus.MustRegister(prm.MethodDuration)
 	prometheus.MustRegister(prm.MethodCount)
 	prometheus.MustRegister(prm.ActiveSubscribers)
