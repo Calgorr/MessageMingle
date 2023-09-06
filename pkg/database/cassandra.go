@@ -34,7 +34,7 @@ func (c *cassandraDatabase) SaveMessage(ctx context.Context, msg *broker.Message
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageCassandra method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
-	id := snowflake.GenerateSnowflake()
+	id := snowflake.GenerateSnowflake(ctx)
 	query := c.session.Query(
 		"INSERT INTO message_broker (id, subject, body, expiration, expirationduration) VALUES (?, ?, ?, ?, ?)",
 		id, subject, msg.Body, expirationDate, msg.Expiration,
