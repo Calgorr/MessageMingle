@@ -6,7 +6,6 @@ import (
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
 	"therealbroker/pkg/database"
-	"time"
 
 	"go.opentelemetry.io/otel"
 )
@@ -60,13 +59,6 @@ func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message
 	}
 	wg.Wait()
 	msg.ID = m.db.SaveMessage(ctx, &msg, subject)
-	go func() {
-		if msg.Expiration == 0 {
-			return
-		}
-		<-time.After(msg.Expiration)
-		msg.IsExpired = true
-	}()
 	return msg.ID, nil
 }
 

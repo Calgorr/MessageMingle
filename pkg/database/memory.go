@@ -4,6 +4,7 @@ import (
 	"context"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
+	"time"
 
 	"go.opentelemetry.io/otel"
 )
@@ -21,6 +22,13 @@ func NewInMemory() Database {
 func (i *in_memory) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageInMemory method")
 	defer globalSpan.End()
+	go func() {
+		if msg.Expiration == 0 {
+			return
+		}
+		<-time.After(msg.Expiration)
+		msg.IsExpired = true
+	}()
 	if i.messages[subject] == nil {
 		i.messages[subject] = make(map[int]*broker.Message)
 	}
