@@ -1,14 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 
 	pb "therealbroker/api/proto/protoGen"
 	"therealbroker/api/proto/server/handler"
 	"therealbroker/internal/broker"
-	"therealbroker/internal/exporter"
 
 	"google.golang.org/grpc"
 )
@@ -17,13 +15,13 @@ func main() {
 	// go func() {
 	// 	prometheusServerStart()
 	// }()
-	go func() {
-		err := exporter.Register()
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println("exporter registered")
-	}()
+	// go func() {
+	// 	err := exporter.Register()
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 	}
+	// 	fmt.Println("exporter registered")
+	// }()
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)

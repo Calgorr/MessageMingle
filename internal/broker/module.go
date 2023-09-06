@@ -24,7 +24,7 @@ func NewModule() broker.Broker {
 	if mainService == nil {
 		mainService := &Module{
 			subscribers: make(map[string][]chan broker.Message),
-			db:          database.NewInMemory(),
+			db:          database.NewCassandraDatabase(),
 		}
 		return mainService
 	}
