@@ -28,24 +28,31 @@ func main() {
 	ctx := context.Background()
 	var wg sync.WaitGroup
 	wg.Add(1)
+	done := make(chan bool, 1)
 	go func() {
 		defer wg.Done()
-		Publish(ctx, client)
+		Publish(ctx, client, done)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		time.Sleep(20 * time.Minute)
+		done <- true
 	}()
 	wg.Wait()
 }
 
-func Publish(ctx context.Context, client pb.BrokerClient) {
+func Publish(ctx context.Context, client pb.BrokerClient, done chan bool) {
 	var wg sync.WaitGroup
-	ticker := time.NewTicker(1000 * time.Millisecond)
+	ticker := time.NewTicker(50 * time.Microsecond) // 20k msg/s 1,2M msg/min 24M msg in 20 min
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-done:
 			wg.Wait()
 			return
-		default:
+		case <-ticker.C:
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
