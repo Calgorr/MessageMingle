@@ -34,11 +34,3 @@ func main() {
 		log.Fatalf("Server serve failed: %v", err)
 	}
 }
-
-// func prometheusServerStart() {
-// 	prometheus.MustRegister(prm.MethodDuration)
-// 	prometheus.MustRegister(prm.MethodCount)
-// 	prometheus.MustRegister(prm.ActiveSubscribers)
-// 	http.Handle("/metrics", promhttp.Handler())
-// 	fmt.Println(http.ListenAndServe(fmt.Sprintf(":%d", 9091), nil))
-// }
