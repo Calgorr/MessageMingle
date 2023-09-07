@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"log"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -12,10 +11,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-)
-
-var (
-	letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 )
 
 func main() {
@@ -56,7 +51,7 @@ func Publish(ctx context.Context, client pb.BrokerClient, done chan bool) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				_, err := client.Publish(ctx, &pb.PublishRequest{Subject: "test", Body: []byte(randomString(10)), ExpirationSeconds: 10})
+				_, err := client.Publish(ctx, &pb.PublishRequest{Subject: "test", Body: []byte("randomString(10)"), ExpirationSeconds: 10})
 				if err != nil {
 					log.Printf("Publish error: %v", err)
 				}
@@ -94,12 +89,4 @@ func Fetch(ctx context.Context, client pb.BrokerClient) {
 		log.Fatalf("Fetch error: %v", err)
 	}
 	log.Println(msg)
-}
-
-func randomString(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
 }
