@@ -18,7 +18,7 @@ type postgresDatabase struct {
 
 const (
 	host     = "localhost"
-	port     = 8080
+	port     = 8081
 	user     = "postgres"
 	password = "postgres"
 	dbname   = "broker"
@@ -29,6 +29,8 @@ func NewPostgresDatabase() Database {
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
+	db.SetMaxOpenConns(95)
+	db.SetMaxIdleConns(45)
 	if err != nil {
 		panic(err)
 	}
