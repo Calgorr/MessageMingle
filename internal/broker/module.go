@@ -13,17 +13,16 @@ import (
 var mainService *Module
 
 type Module struct {
-	isClosed      bool
-	subscribers   map[string][]chan broker.Message
-	ListenersLock sync.Mutex
-	db            database.Database
+	isClosed    bool
+	subscribers map[string][]chan broker.Message
+	db          database.Database
 }
 
 func NewModule() broker.Broker {
 	if mainService == nil {
 		mainService := &Module{
 			subscribers: make(map[string][]chan broker.Message),
-			db:          database.NewCassandraDatabase(),
+			db:          database.NewScyllaDatabase(),
 		}
 		return mainService
 	}
@@ -44,8 +43,6 @@ func (m *Module) Close() error {
 func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message) (int, error) {
 	_, span := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Publish broker method")
 	defer span.End()
-	m.ListenersLock.Lock()
-	defer m.ListenersLock.Unlock()
 	if m.isClosed {
 		return 0, broker.ErrUnavailable
 	}
@@ -65,8 +62,6 @@ func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message
 func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.Message, error) {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Subscribe broker method")
 	defer globalSpan.End()
-	m.ListenersLock.Lock()
-	defer m.ListenersLock.Unlock()
 	if m.isClosed {
 		return nil, broker.ErrUnavailable
 	}
@@ -84,8 +79,6 @@ func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.M
 func (m *Module) Fetch(ctx context.Context, subject string, id int) (broker.Message, error) {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Fetch broker method")
 	defer globalSpan.End()
-	m.ListenersLock.Lock()
-	defer m.ListenersLock.Unlock()
 	if m.isClosed {
 		return broker.Message{}, broker.ErrUnavailable
 	}
