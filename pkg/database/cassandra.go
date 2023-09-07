@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"sync"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
 	"therealbroker/pkg/snowflake"
@@ -13,6 +14,7 @@ import (
 
 type cassandraDatabase struct {
 	session *gocql.Session
+	sync.RWMutex
 }
 
 const (
@@ -61,7 +63,6 @@ func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject st
 		}
 		return nil, err
 	}
-
 	msg := &broker.Message{
 		ID:         id,
 		Body:       body,
