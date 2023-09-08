@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
-	"therealbroker/pkg/snowflake"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -43,9 +42,7 @@ func NewPostgresDatabase() Database {
 }
 
 func (p *postgresDatabase) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
-	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SetMessageIDCassandra method")
-	defer globalSpan.End()
-	msg.ID = snowflake.GenerateSnowflake(ctx)
+
 }
 
 func (p *postgresDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
@@ -53,9 +50,9 @@ func (p *postgresDatabase) SaveMessage(ctx context.Context, msg *broker.Message,
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
 	err := p.db.QueryRow(
-		"INSERT INTO message_broker (subject, body, expiration, expirationduration) VALUES ($1, $2, $3, $4)",
+		"INSERT INTO message_broker (subject, body, expiration) VALUES ($1, $2, $3) RETURNING ID",
 		subject, msg.Body, expirationDate, msg.Expiration,
-	)
+	).Scan(&msg.ID)
 	if err != nil {
 		panic(err)
 	}
@@ -67,8 +64,7 @@ func (p *postgresDatabase) FetchMessage(ctx context.Context, id int, subject str
 	defer globalSpan.End()
 	var body string
 	var expiration time.Time
-	var expirationDuration time.Duration
-	err := p.db.QueryRow("SELECT body, expiration, expirationduration FROM message_broker WHERE id = $1 AND subject = $2", id, subject).Scan(&body, &expiration, &expirationDuration)
+	err := p.db.QueryRow("SELECT body, expiration FROM message_broker WHERE id = $1 AND subject = $2", id, subject).Scan(&body, &expiration)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, broker.ErrInvalidID
@@ -79,7 +75,7 @@ func (p *postgresDatabase) FetchMessage(ctx context.Context, id int, subject str
 	msg := &broker.Message{
 		ID:         id,
 		Body:       body,
-		Expiration: expirationDuration,
+		Expiration: 0,
 		IsExpired:  time.Now().After(expiration),
 	}
 
