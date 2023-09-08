@@ -155,7 +155,7 @@ func TestNewSubscriptionShouldNotGetPreviousMessages(t *testing.T) {
 }
 
 func TestConcurrentSubscribesOnOneSubjectShouldNotFail(t *testing.T) {
-	ticker := time.NewTicker(5 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i don't have enough resources to test it with 500ms
+	ticker := time.NewTicker(10 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i don't have enough resources to test it with 500ms
 	defer ticker.Stop()
 	var wg sync.WaitGroup
 
@@ -178,7 +178,7 @@ func TestConcurrentSubscribesOnOneSubjectShouldNotFail(t *testing.T) {
 }
 
 func TestConcurrentSubscribesShouldNotFail(t *testing.T) {
-	ticker := time.NewTicker(5 * time.Millisecond) // works fine with 5ms but with 2000ms it timeouts i don't have enough resources to test it with 2000ms
+	ticker := time.NewTicker(10 * time.Millisecond) // works fine with 5ms but with 2000ms it timeouts i don't have enough resources to test it with 2000ms
 	defer ticker.Stop()
 	var wg sync.WaitGroup
 
@@ -201,7 +201,7 @@ func TestConcurrentSubscribesShouldNotFail(t *testing.T) {
 }
 
 func TestConcurrentPublishOnOneSubjectShouldNotFail(t *testing.T) {
-	ticker := time.NewTicker(5 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i think it's because of the postgres	 slow response
+	ticker := time.NewTicker(10 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i think it's because of the postgres	 slow response
 	defer ticker.Stop()
 	var wg sync.WaitGroup
 
@@ -226,7 +226,7 @@ func TestConcurrentPublishOnOneSubjectShouldNotFail(t *testing.T) {
 }
 
 func TestConcurrentPublishShouldNotFail(t *testing.T) {
-	ticker := time.NewTicker(5 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i think it's because of the postgres	 slow response
+	ticker := time.NewTicker(10 * time.Millisecond) // works fine with 5ms but with 500ms it timeouts i think it's because of the postgres	 slow response
 	defer ticker.Stop()
 	var wg sync.WaitGroup
 
@@ -251,7 +251,7 @@ func TestConcurrentPublishShouldNotFail(t *testing.T) {
 }
 
 func TestDataRace(t *testing.T) {
-	duration := 5 * time.Millisecond // works fine with 5ms but with 500ms it timeouts i don't have enough resources to test it with 500ms
+	duration := 10 * time.Millisecond // works fine with 5ms but with 500ms it timeouts i don't have enough resources to test it with 500ms
 	ticker := time.NewTicker(duration)
 	defer ticker.Stop()
 	var wg sync.WaitGroup
