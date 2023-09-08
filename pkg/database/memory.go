@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"sync"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
 	"time"
@@ -11,6 +12,7 @@ import (
 
 type in_memory struct {
 	messages map[string]map[int]*broker.Message
+	sync.RWMutex
 }
 
 func NewInMemory() Database {
@@ -23,7 +25,9 @@ func (i *in_memory) SetMessageID(ctx context.Context, msg *broker.Message, subje
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SetMessageIDInMemory method")
 	defer globalSpan.End()
 	if i.messages[subject] == nil {
+		i.Lock()
 		i.messages[subject] = make(map[int]*broker.Message)
+		i.Unlock()
 	}
 	msg.ID = len(i.messages[subject]) + 1
 }
@@ -38,7 +42,9 @@ func (i *in_memory) SaveMessage(ctx context.Context, msg *broker.Message, subjec
 		<-time.After(msg.Expiration)
 		msg.IsExpired = true
 	}()
+	i.Lock()
 	i.messages[subject][msg.ID] = msg
+	i.Unlock()
 	return msg.ID
 }
 
