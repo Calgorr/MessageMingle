@@ -58,7 +58,7 @@ func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject st
 	var body string
 	var expiration time.Time
 	query := c.session.Query(
-		"SELECT body, expiration, expirationduration FROM message_broker WHERE id = ? ALLOW FILTERING",
+		"SELECT body, expiration FROM message_broker WHERE id = ? ALLOW FILTERING",
 		id,
 	)
 	if err := query.Scan(&body, &expiration); err != nil {
