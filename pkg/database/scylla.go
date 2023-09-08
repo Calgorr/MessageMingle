@@ -27,19 +27,24 @@ func NewScyllaDatabase() Database {
 	return &scyllaDatabase{session: session}
 }
 
+func (s *scyllaDatabase) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SetMessageIDCassandra method")
+	defer globalSpan.End()
+	msg.ID = snowflake.GenerateSnowflake(ctx)
+}
+
 func (c *scyllaDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageCassandra method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
-	id := snowflake.GenerateSnowflake(ctx)
 	query := c.session.Query(
 		"INSERT INTO message_broker (id, subject, body, expiration) VALUES (?, ?, ?, ?)",
-		id, subject, msg.Body, expirationDate,
+		msg.ID, subject, msg.Body, expirationDate,
 	)
 	if err := query.Exec(); err != nil {
 		panic(err)
 	}
-	return id
+	return msg.ID
 }
 
 func (c *scyllaDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
+	"therealbroker/pkg/snowflake"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -41,19 +42,24 @@ func NewPostgresDatabase() Database {
 	return &postgresDatabase{db: db}
 }
 
+func (p *postgresDatabase) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SetMessageIDCassandra method")
+	defer globalSpan.End()
+	msg.ID = snowflake.GenerateSnowflake(ctx)
+}
+
 func (p *postgresDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessagePostgres method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
-	var id int
 	err := p.db.QueryRow(
-		"INSERT INTO message_broker (subject, body, expiration, expirationduration) VALUES ($1, $2, $3, $4) RETURNING id",
+		"INSERT INTO message_broker (subject, body, expiration, expirationduration) VALUES ($1, $2, $3, $4)",
 		subject, msg.Body, expirationDate, msg.Expiration,
-	).Scan(&id)
+	)
 	if err != nil {
 		panic(err)
 	}
-	return id
+	return msg.ID
 }
 
 func (p *postgresDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {

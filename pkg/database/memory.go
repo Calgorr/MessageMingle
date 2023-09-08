@@ -19,6 +19,15 @@ func NewInMemory() Database {
 	}
 }
 
+func (i *in_memory) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SetMessageIDInMemory method")
+	defer globalSpan.End()
+	if i.messages[subject] == nil {
+		i.messages[subject] = make(map[int]*broker.Message)
+	}
+	msg.ID = len(i.messages[subject]) + 1
+}
+
 func (i *in_memory) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageInMemory method")
 	defer globalSpan.End()
@@ -29,11 +38,7 @@ func (i *in_memory) SaveMessage(ctx context.Context, msg *broker.Message, subjec
 		<-time.After(msg.Expiration)
 		msg.IsExpired = true
 	}()
-	if i.messages[subject] == nil {
-		i.messages[subject] = make(map[int]*broker.Message)
-	}
-	i.messages[subject][len(i.messages[subject])] = msg
-	msg.ID = len(i.messages[subject]) - 1
+	i.messages[subject][msg.ID] = msg
 	return msg.ID
 }
 
