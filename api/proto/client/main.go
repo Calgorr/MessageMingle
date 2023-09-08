@@ -39,7 +39,7 @@ func main() {
 
 func Publish(ctx context.Context, client pb.BrokerClient, done chan bool) {
 	var wg sync.WaitGroup
-	ticker := time.NewTicker(50 * time.Microsecond) // 20k msg/s 1,2M msg/min 24M msg in 20 min
+	ticker := time.NewTicker(20 * time.Microsecond) // 20k msg/s 1,2M msg/min 24M msg in 20 min
 	for {
 		select {
 		case <-ctx.Done():
