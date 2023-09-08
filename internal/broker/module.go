@@ -7,15 +7,19 @@ import (
 	"therealbroker/pkg/broker"
 	"therealbroker/pkg/database"
 
+	"github.com/gammazero/workerpool"
 	"go.opentelemetry.io/otel"
 )
 
 var mainService *Module
 
+var wp = workerpool.New(100)
+
 type Module struct {
 	isClosed    bool
 	subscribers map[string][]chan broker.Message
-	db          database.Database
+	sync.RWMutex
+	db database.Database
 }
 
 func NewModule() broker.Broker {
@@ -55,7 +59,12 @@ func (m *Module) Publish(ctx context.Context, subject string, msg broker.Message
 		}(listener)
 	}
 	wg.Wait()
-	msg.ID = m.db.SaveMessage(ctx, &msg, subject)
+	m.db.SetMessageID(ctx, &msg, subject)
+	wp.Submit(
+		func() {
+			m.db.SaveMessage(ctx, &msg, subject)
+		},
+	)
 	return msg.ID, nil
 }
 
@@ -70,7 +79,9 @@ func (m *Module) Subscribe(ctx context.Context, subject string) (<-chan broker.M
 		return nil, broker.ErrCancelled
 	default:
 		ch := make(chan broker.Message, 100000)
+		m.Lock()
 		m.subscribers[subject] = append(m.subscribers[subject], ch)
+		m.Unlock()
 		return ch, nil
 	}
 
