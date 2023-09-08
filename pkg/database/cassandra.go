@@ -59,8 +59,8 @@ func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject st
 	var expiration time.Time
 	var expirationDuration time.Duration
 	query := c.session.Query(
-		"SELECT body, expiration, expirationduration FROM message_broker WHERE id = ? AND subject = ?",
-		id, subject,
+		"SELECT body, expiration, expirationduration FROM message_broker WHERE id = ? ALLOW FILTERING",
+		id,
 	)
 	if err := query.Scan(&body, &expiration, &expirationDuration); err != nil {
 		if err == gocql.ErrNotFound {

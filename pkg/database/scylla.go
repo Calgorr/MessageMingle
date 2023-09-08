@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+
 	"sync"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
@@ -53,8 +54,8 @@ func (c *scyllaDatabase) FetchMessage(ctx context.Context, id int, subject strin
 	var body string
 	var expiration time.Time
 	query := c.session.Query(
-		"SELECT body, expiration FROM message_broker WHERE id = ? AND subject = ?",
-		id, subject,
+		"SELECT body, expiration FROM message_broker WHERE id = ? ALLOW FILTERING",
+		id,
 	)
 	if err := query.Scan(&body, &expiration); err != nil {
 		if err == gocql.ErrNotFound {
@@ -72,6 +73,5 @@ func (c *scyllaDatabase) FetchMessage(ctx context.Context, id int, subject strin
 	if msg.IsExpired {
 		return &broker.Message{}, broker.ErrExpiredID
 	}
-
 	return msg, nil
 }
