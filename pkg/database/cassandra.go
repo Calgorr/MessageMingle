@@ -43,8 +43,8 @@ func (c *cassandraDatabase) SaveMessage(ctx context.Context, msg *broker.Message
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
 	query := c.session.Query(
-		"INSERT INTO message_broker (id, subject, body, expiration, expirationduration) VALUES (?, ?, ?, ?, ?)",
-		msg.ID, subject, msg.Body, expirationDate, msg.Expiration,
+		"INSERT INTO message_broker (id, subject, body, expiration) VALUES (?, ?, ?, ?)",
+		msg.ID, subject, msg.Body, expirationDate,
 	)
 	if err := query.Exec(); err != nil {
 		panic(err)
@@ -57,12 +57,11 @@ func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject st
 	defer globalSpan.End()
 	var body string
 	var expiration time.Time
-	var expirationDuration time.Duration
 	query := c.session.Query(
 		"SELECT body, expiration, expirationduration FROM message_broker WHERE id = ? ALLOW FILTERING",
 		id,
 	)
-	if err := query.Scan(&body, &expiration, &expirationDuration); err != nil {
+	if err := query.Scan(&body, &expiration); err != nil {
 		if err == gocql.ErrNotFound {
 			return nil, broker.ErrInvalidID
 		}
@@ -71,7 +70,7 @@ func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject st
 	msg := &broker.Message{
 		ID:         id,
 		Body:       body,
-		Expiration: expirationDuration,
+		Expiration: 0,
 		IsExpired:  time.Now().After(expiration),
 	}
 
