@@ -29,7 +29,7 @@ func NewPostgresDatabase() Database {
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
-	db.SetMaxOpenConns(95)
+	db.SetMaxOpenConns(90)
 	db.SetMaxIdleConns(45)
 	if err != nil {
 		panic(err)
@@ -51,7 +51,7 @@ func (p *postgresDatabase) SaveMessage(ctx context.Context, msg *broker.Message,
 	expirationDate := time.Now().Add(msg.Expiration)
 	err := p.db.QueryRow(
 		"INSERT INTO message_broker (subject, body, expiration) VALUES ($1, $2, $3) RETURNING ID",
-		subject, msg.Body, expirationDate, msg.Expiration,
+		subject, msg.Body, expirationDate,
 	).Scan(&msg.ID)
 	if err != nil {
 		panic(err)
