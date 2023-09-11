@@ -2,6 +2,7 @@ package broker
 
 import (
 	"context"
+	"os"
 	"sync"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
@@ -26,7 +27,16 @@ func NewModule() broker.Broker {
 	if mainService == nil {
 		mainService := &Module{
 			subscribers: make(map[string][]chan broker.Message),
-			db:          database.NewScyllaDatabase(),
+		}
+		switch os.Getenv("DATABASE_TYPE") {
+		case "memory":
+			mainService.db = database.NewInMemory()
+		case "scylla":
+			mainService.db = database.NewScyllaDatabase()
+		case "cassandra":
+			mainService.db = database.NewCassandraDatabase()
+		case "postgres":
+			mainService.db = database.NewPostgresDatabase()
 		}
 		return mainService
 	}
