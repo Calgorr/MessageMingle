@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	DefaultCollectorEndpoint = "localhost:14268"
+	DefaultCollectorEndpoint = "jaeger:14268"
 	DefaultServiceName       = "therealbroker"
 	DefaultServiceVersion    = "0.0.1"
 	DefaultEnvironment       = "development"
