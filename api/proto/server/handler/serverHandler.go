@@ -25,12 +25,12 @@ func StartServer() {
 	go func() {
 		trace.PrometheusServerStart()
 	}()
-	go func() {
-		err := trace.JaegerRegister()
-		if err != nil {
-			log.Fatalf("Jaeger failed: %v", err)
-		}
-	}()
+	// go func() {
+	// 	err := trace.JaegerRegister()
+	// 	if err != nil {
+	// 		log.Fatalf("Jaeger failed: %v", err)
+	// 	}
+	// }()
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)

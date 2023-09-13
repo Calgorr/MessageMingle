@@ -35,8 +35,8 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
                       stat_prefix: local_rate_limit
                       token_bucket:
-                        max_tokens: 100  # Maximum tokens available in the bucket
-                        tokens_per_fill: 100  # Tokens added to the bucket on each refill
+                        max_tokens: 1  # Maximum tokens available in the bucket
+                        tokens_per_fill: 1  # Tokens added to the bucket on each refill
                         fill_interval: 1s     # Interval at which tokens are added
                   - name: envoy.filters.http.router
                     typed_config:
@@ -55,5 +55,5 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: 192.168.15.109
+                address: 172.26.11.51
                 port_value: 8080
