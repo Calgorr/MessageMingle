@@ -12,10 +12,13 @@ services:
       - DATABASE_TYPE=scylla # change the host and port to the name of the database container
     depends_on:
       - Scylla # and here
+      - Prometheus
+      - Grafana
+      - Jaeger
     networks:
       - mynetwork
 
-  jaeger:
+  Jaeger:
     hostname: jaeger
     image: jaegertracing/all-in-one:latest
     ports:
@@ -56,7 +59,7 @@ services:
     networks:
       - mynetwork
 
-  prometheus:
+  Prometheus:
     hostname: prometheus
     image: prom/prometheus:latest
     volumes:
@@ -66,16 +69,14 @@ services:
     networks:
       - mynetwork
 
-  grafana:
+  Grafana:
     image: grafana/grafana:latest
     ports:
       - "3000:3000"
-    depends_on:
-      - prometheus
     networks:
       - mynetwork
 
-  envoy:
+  Envoy:
     hostname: envoy
     image: envoyproxy/envoy:dev-d12d47b05a832ce04d9130a869fa72f7ddbcef28
     ports:
