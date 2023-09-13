@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  broker:
+    hostname: broker
+    image: broker
+    ports:
+      - "8080:8080"
+    entrypoint: /bin/bash -c "./wait-for-it.sh -t 0 scylla:9042 && go run ./api/proto/server/main.go" # change the host and port to the name of the database container
+    restart: on-failure
+    environment:
+      - DATABASE_TYPE=scylla # change the host and port to the name of the database container
+    depends_on:
+      - Scylla # and here
+    networks:
+      - mynetwork
+
+  jaeger:
+    hostname: jaeger
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
+      - "14268:14268"
+    networks:
+      - mynetwork
+
+  Postgres:
+    hostname: postgres
+    image: postgres:latest
+    restart: on-failure
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - mynetwork
+
+  Scylla:
+    hostname: scylla
+    image: scylladb/scylla:latest
+    ports:
+      - "9042:9042"
+    restart: on-failure
+    networks:
+      - mynetwork
+
+  Cassandra:
+    hostname: cassandra
+    image: cassandra:latest
+    ports:
+      - "9042:9042"
+    restart: on-failure
+    networks:
+      - mynetwork
+
+  prometheus:
+    hostname: prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - mynetwork
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - mynetwork
+
+  envoy:
+    hostname: envoy
+    image: envoyproxy/envoy:dev-d12d47b05a832ce04d9130a869fa72f7ddbcef28
+    ports:
+      - "10000:10000"
+    depends_on:
+      - broker
+    volumes:
+      - ./envoy-proxy-ratelimit.yaml:/etc/envoy/envoy.yaml
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
