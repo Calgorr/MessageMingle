@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"os"
 	"sync"
 	"therealbroker/internal/exporter"
 	"therealbroker/pkg/broker"
@@ -17,8 +18,8 @@ type cassandraDatabase struct {
 	sync.RWMutex
 }
 
-const (
-	contactPoints = "127.0.0.1"
+var (
+	contactPoints = os.Getenv("DATABASE_TYPE")
 	keyspace      = "broker"
 )
 

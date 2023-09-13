@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"log"
 
 	"sync"
 	"therealbroker/internal/exporter"
@@ -20,12 +21,26 @@ type scyllaDatabase struct {
 
 func NewScyllaDatabase() Database {
 	cluster := gocql.NewCluster(contactPoints)
-	cluster.Keyspace = keyspace
 	session, err := cluster.CreateSession()
 	if err != nil {
+		log.Fatal(err)
+	}
+	scyllaMigration(session)
+	cluster.Keyspace = keyspace
+	return &scyllaDatabase{session: session}
+}
+
+func scyllaMigration(session *gocql.Session) {
+	if err := session.Query(
+		"CREATE KEYSPACE IF NOT EXISTS broker WITH replication = { 'class': 'SimpleStrategy', 'replication_factor': 1 };",
+	).Exec(); err != nil {
 		panic(err)
 	}
-	return &scyllaDatabase{session: session}
+	if err := session.Query(
+		"CREATE TABLE IF NOT EXISTS broker.message_broker ( id bigint PRIMARY KEY, body text, expiration timestamp, subject text )",
+	).Exec(); err != nil {
+		panic(err)
+	}
 }
 
 func (s *scyllaDatabase) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {

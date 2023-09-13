@@ -17,14 +17,15 @@ type postgresDatabase struct {
 }
 
 const (
-	host     = "localhost"
-	port     = 8081
+	host     = "postgres"
+	port     = 5432
 	user     = "postgres"
 	password = "postgres"
 	dbname   = "broker"
 )
 
 func NewPostgresDatabase() Database {
+	createDatabase()
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
@@ -38,7 +39,37 @@ func NewPostgresDatabase() Database {
 	if err != nil {
 		panic(err)
 	}
+	postgresMigration(db)
 	return &postgresDatabase{db: db}
+}
+
+func createDatabase() {
+	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s sslmode=disable",
+		host, port, user, password))
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbname))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func postgresMigration(db *sql.DB) {
+	_, err := db.Exec(`
+        CREATE TABLE IF NOT EXISTS message_broker (
+            id BIGSERIAL PRIMARY KEY,
+            subject TEXT,
+            body TEXT,
+            expiration TIMESTAMPTZ
+        )
+    `)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (p *postgresDatabase) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
