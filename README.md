@@ -1,10 +1,12 @@
 # Welcome project for newcomers!
 
 # Introduction
+
 In this project you have to implement a message broker, based on `broker.Broker`
 interface. There are unit tests to specify requirements and also validate your implementation.
 
 # Roadmap
+
 - [ ] Implement `broker.Broker` interface and pass all tests
 - [ ] Add basic logs and prometheus metrics
   - Metrics for each RPCs:
@@ -14,11 +16,12 @@ interface. There are unit tests to specify requirements and also validate your i
   - Env metrics:
     - Metrics for your application memory, cpu load, cpu utilization, GCs
 - [ ] Implement gRPC API for the broker and main functionalities
-- [ ] Create *dockerfile* and *docker-compose* files for your deployment
+- [ ] Create _dockerfile_ and _docker-compose_ files for your deployment
 - [ ] Deploy your app with the previous `docker-compose` on a remote machine
 - [ ] Deploy your app on K8
 
 # Phase 2 Evaluation
+
 We run our gRPC client that implemented the `broker.proto` against your deployed broker application.
 
 As it should function properly ( like the unit tests ), we expect the provided metrics to display a good observation, and if
