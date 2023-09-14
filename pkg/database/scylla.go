@@ -19,6 +19,11 @@ type scyllaDatabase struct {
 	sync.RWMutex
 }
 
+const (
+	insertQuery = "INSERT INTO broker.message_broker (id, subject, body, expiration) VALUES (?, ?, ?, ?)"
+	selectQuery = "SELECT body, expiration FROM broker.message_broker WHERE id = ? ALLOW FILTERING"
+)
+
 func NewScyllaDatabase() Database {
 	cluster := gocql.NewCluster(contactPoints)
 	session, err := cluster.CreateSession()
@@ -54,7 +59,7 @@ func (c *scyllaDatabase) SaveMessage(ctx context.Context, msg *broker.Message, s
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
 	query := c.session.Query(
-		"INSERT INTO broker.message_broker (id, subject, body, expiration) VALUES (?, ?, ?, ?)",
+		insertQuery,
 		msg.ID, subject, msg.Body, expirationDate,
 	)
 	if err := query.Exec(); err != nil {
@@ -69,7 +74,7 @@ func (c *scyllaDatabase) FetchMessage(ctx context.Context, id int, subject strin
 	var body string
 	var expiration time.Time
 	query := c.session.Query(
-		"SELECT body, expiration FROM broker.message_broker WHERE id = ? ALLOW FILTERING",
+		selectQuery,
 		id,
 	)
 	if err := query.Scan(&body, &expiration); err != nil {

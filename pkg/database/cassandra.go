@@ -44,7 +44,7 @@ func (c *cassandraDatabase) SaveMessage(ctx context.Context, msg *broker.Message
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
 	query := c.session.Query(
-		"INSERT INTO message_broker (id, subject, body, expiration) VALUES (?, ?, ?, ?)",
+		insertQuery,
 		msg.ID, subject, msg.Body, expirationDate,
 	)
 	if err := query.Exec(); err != nil {
@@ -59,7 +59,7 @@ func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject st
 	var body string
 	var expiration time.Time
 	query := c.session.Query(
-		"SELECT body, expiration FROM message_broker WHERE id = ? ALLOW FILTERING",
+		selectQuery,
 		id,
 	)
 	if err := query.Scan(&body, &expiration); err != nil {
