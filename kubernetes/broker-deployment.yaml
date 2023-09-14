@@ -4,6 +4,7 @@ metadata:
   name: broker
   labels:
     app: broker
+  namespace: bootcamp
 
 spec:
   selector:
@@ -17,13 +18,6 @@ spec:
       containers:
       - name: broker
         image: calgor/balebroker:v1
-        resources:
-            requests:
-              memory: "2Gi"
-              cpu: "2"
-            limits:
-              memory: "2Gi"
-              cpu: "4"
         ports:
         - containerPort: 8080
         env:
