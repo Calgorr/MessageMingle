@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy
+  namespace: bootcamp
+  labels:
+    app: envoy
+data:
+  envoy.yml: |
+    admin:
+      access_log_path: /dev/null
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 9901
+
+    static_resources:
+      listeners:
+        - name: local_rate_limit_listener
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 10000
+          filter_chains:
+            - filters:
+                - name: envoy.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: local_rate_limit
+                    route_config:
+                      name: local_rate_limit_route
+                      virtual_hosts:
+                        - name: local_rate_limit_service
+                          domains: ["*"]
+                          routes:
+                            - match:
+                                prefix: "/"
+                              route:
+                                cluster: message_broker_cluster
+
+                    http_filters:
+                      - name: envoy.filters.http.local_ratelimit
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                          stat_prefix: local_rate_limit
+                          token_bucket:
+                            max_tokens: 1 # Maximum tokens available in the bucket
+                            tokens_per_fill: 1 # Tokens added to the bucket on each refill
+                            fill_interval: 1s # Interval at which tokens are added
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+      clusters:
+        - name: message_broker_cluster
+          type: static
+          lb_policy: round_robin
+          http2_protocol_options: {}
+          connect_timeout: 1s
+          load_assignment:
+            cluster_name: message_broker_cluster
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: broker
+                          port_value: 8080
