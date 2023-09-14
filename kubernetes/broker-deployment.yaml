@@ -1,0 +1,37 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: broker
+  labels:
+    app: broker
+
+spec:
+  selector:
+    matchLabels:
+      app: broker
+  template:
+    metadata:
+      labels:
+        app: broker
+    spec:
+      containers:
+      - name: broker
+        image: calgor/balebroker:v1
+        resources:
+            requests:
+              memory: "2Gi"
+              cpu: "2"
+            limits:
+              memory: "2Gi"
+              cpu: "4"
+        ports:
+        - containerPort: 8080
+        env:
+          - name: DATABASE_TYPE
+            value: "scylla"
+        command:
+          - "/bin/bash"
+          - "-c"
+          - "./scripts/wait-for-it.sh -t 0 scylla:9042 && go run ./api/proto/server/main.go"
+  replicas: 1
+    
