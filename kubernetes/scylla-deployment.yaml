@@ -1,0 +1,23 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: scylla
+  labels:
+    app: scylla
+  namespace: bootcamp
+
+spec:
+  selector:
+    matchLabels:
+      app: scylla
+  template:
+    metadata:
+      labels:
+        app: scylla
+    spec:
+      containers:
+      - name: scylla
+        image: scylladb/scylla:latest
+        ports:
+        - containerPort: 9042
+  replicas: 1
