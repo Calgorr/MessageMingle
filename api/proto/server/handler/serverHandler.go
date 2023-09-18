@@ -113,7 +113,6 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 			}
 		}
 	}
-
 	go forwardSubscribeRequest(spanCtx, request, ip)
 	for {
 		select {
