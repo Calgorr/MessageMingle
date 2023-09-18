@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"os"
 	pb "therealbroker/api/proto/protoGen"
 	"therealbroker/api/proto/server/redis"
 	"therealbroker/api/proto/server/trace"
@@ -55,6 +56,7 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	ip, err := s.redisClient.GetPodIPBySubject(request.GetSubject())
 	if err != nil {
+		s.redisClient.SetPodIPBySubject(request.GetSubject(), os.Getenv("POD_IP"))
 		msg := broker.Message{
 			Body:       string(request.GetBody()),
 			Expiration: time.Duration(request.GetExpirationSeconds()),
