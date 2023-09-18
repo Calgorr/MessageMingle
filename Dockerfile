@@ -3,6 +3,7 @@ FROM golang
 # bootstrap os
 RUN apt -y update
 
+
 WORKDIR /home/app
 
 # copy project files & and go inside project directory
