@@ -14,6 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type BrokerServer struct {
@@ -106,4 +107,20 @@ func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb
 	}
 	prm.MethodCount.WithLabelValues("Fetch", "success").Inc()
 	return &pb.MessageResponse{Body: []byte(msg.Body)}, nil
+}
+
+func (s *BrokerServer) ForwardPublishRequest(ctx context.Context, request *pb.PublishRequest, remoteServerAddr string) (*pb.PublishResponse, error) {
+	conn, err := grpc.Dial(remoteServerAddr+":8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	remoteClient := pb.NewBrokerClient(conn)
+	remoteResponse, err := remoteClient.Publish(ctx, request)
+	if err != nil {
+		prm.MethodCount.WithLabelValues("Publish (forwarded)", "failed").Inc()
+		return nil, err
+	}
+	prm.MethodCount.WithLabelValues("Publish (forwarded)", "success").Inc()
+	return remoteResponse, nil
 }
