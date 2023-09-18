@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: broker
-        image: calgor/balebroker:v1
+        image: calgor/balebroker:v3
         ports:
         - containerPort: 8080
         env:
