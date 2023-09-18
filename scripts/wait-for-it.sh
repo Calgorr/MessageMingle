@@ -120,6 +120,7 @@ while [[ $# -gt 0 ]]; do
         usage
         ;;
     *)
+        exit
         echoerr "Unknown argument: $1"
         usage
         ;;
