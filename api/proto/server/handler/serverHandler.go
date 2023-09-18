@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	pb "therealbroker/api/proto/protoGen"
+	"therealbroker/api/proto/server/redis"
 	"therealbroker/api/proto/server/trace"
 	brk "therealbroker/internal/broker"
 	"therealbroker/internal/exporter"
@@ -20,6 +21,7 @@ import (
 type BrokerServer struct {
 	pb.UnimplementedBrokerServer
 	BrokerInstance broker.Broker
+	redisClient    *redis.RedisDB
 }
 
 func StartServer() {
@@ -39,6 +41,7 @@ func StartServer() {
 	server := grpc.NewServer()
 	pb.RegisterBrokerServer(server, &BrokerServer{
 		BrokerInstance: brk.NewModule(),
+		redisClient:    redis.NewModule(),
 	})
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("Server serve failed: %v", err)
@@ -50,17 +53,27 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 	defer span.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
-	msg := broker.Message{
-		Body:       string(request.GetBody()),
-		Expiration: time.Duration(request.GetExpirationSeconds()),
+	ip, err := s.redisClient.GetPodIPBySubject(request.GetSubject())
+	if err != nil {
+		msg := broker.Message{
+			Body:       string(request.GetBody()),
+			Expiration: time.Duration(request.GetExpirationSeconds()),
+		}
+		id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), msg)
+		if err != nil {
+			prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+			return nil, err
+		}
+		prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+		return &pb.PublishResponse{Id: int32(id)}, nil
 	}
-	id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), msg)
+	resp, err := forwardPublishRequest(spanCtx, request, ip)
 	if err != nil {
 		prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
 		return nil, err
 	}
 	prm.MethodCount.WithLabelValues("Publish", "success").Inc()
-	return &pb.PublishResponse{Id: int32(id)}, nil
+	return resp, nil
 }
 
 func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
@@ -109,7 +122,7 @@ func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb
 	return &pb.MessageResponse{Body: []byte(msg.Body)}, nil
 }
 
-func (s *BrokerServer) ForwardPublishRequest(ctx context.Context, request *pb.PublishRequest, remoteServerAddr string) (*pb.PublishResponse, error) {
+func forwardPublishRequest(ctx context.Context, request *pb.PublishRequest, remoteServerAddr string) (*pb.PublishResponse, error) {
 	conn, err := grpc.Dial(remoteServerAddr+":8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
@@ -118,9 +131,7 @@ func (s *BrokerServer) ForwardPublishRequest(ctx context.Context, request *pb.Pu
 	remoteClient := pb.NewBrokerClient(conn)
 	remoteResponse, err := remoteClient.Publish(ctx, request)
 	if err != nil {
-		prm.MethodCount.WithLabelValues("Publish (forwarded)", "failed").Inc()
 		return nil, err
 	}
-	prm.MethodCount.WithLabelValues("Publish (forwarded)", "success").Inc()
 	return remoteResponse, nil
 }
