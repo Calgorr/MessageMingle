@@ -32,9 +32,9 @@ func (s *RedisDB) GetPodIPBySubject(subject string) (string, error) {
 	if cmd := s.RedisClient.Get(context.Background(), subject); cmd.Err() != redis.Nil {
 		ip, err := cmd.Result()
 		if err != nil {
-			return "", err
+			return "", redis.TxFailedErr
 		}
 		return ip, nil
 	}
-	return "", redis.TxFailedErr
+	return "", redis.Nil
 }
