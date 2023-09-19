@@ -20,15 +20,15 @@ func NewModule() *RedisDB {
 	}
 }
 
-func (s *RedisDB) SetPodIPBySubject(subject, ip string) error {
-	err := s.RedisClient.Set(context.Background(), subject, ip, 0).Err()
+func (s *RedisDB) SetPodIPBySubjectAndIP(subject, ip string) error {
+	err := s.RedisClient.Set(context.Background(), subject+ip, ip, 0).Err()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *RedisDB) GetPodIPBySubject(subject string) (string, error) {
+func (s *RedisDB) GetPodIPBySubjectAndIP(subject, ip string) (string, error) {
 	if cmd := s.RedisClient.Get(context.Background(), subject); cmd.Err() != redis.Nil {
 		ip, err := cmd.Result()
 		if err != nil {
@@ -37,4 +37,20 @@ func (s *RedisDB) GetPodIPBySubject(subject string) (string, error) {
 		return ip, nil
 	}
 	return "", redis.Nil
+}
+
+func (s *RedisDB) GetPodsIPBySubject(subject string) ([]string, error) {
+	var ips []string
+	keys, err := s.RedisClient.Keys(context.Background(), subject+"*").Result()
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range keys {
+		ip, err := s.RedisClient.Get(context.Background(), key).Result()
+		if err != nil {
+			continue
+		}
+		ips = append(ips, ip)
+	}
+	return ips, nil
 }

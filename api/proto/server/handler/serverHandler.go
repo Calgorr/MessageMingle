@@ -54,27 +54,43 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 	defer span.End()
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
-	ip, err := s.redisClient.GetPodIPBySubject(request.GetSubject())
-	if err != nil {
-		msg := broker.Message{
-			Body:       string(request.GetBody()),
-			Expiration: time.Duration(request.GetExpirationSeconds()),
-		}
-		id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), msg)
-		if err != nil {
-			prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
-			return nil, err
-		}
-		prm.MethodCount.WithLabelValues("Publish", "success").Inc()
-		return &pb.PublishResponse{Id: int32(id)}, nil
-	}
-	resp, err := forwardPublishRequest(spanCtx, request, ip)
+	ips, err := s.redisClient.GetPodsIPBySubject(request.GetSubject())
 	if err != nil {
 		prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
 		return nil, err
 	}
-	prm.MethodCount.WithLabelValues("Publish", "success").Inc()
-	return resp, nil
+	for _, ip := range ips {
+		if ip == os.Getenv("POD_IP") {
+			id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), broker.Message{
+				Body:       string(request.GetBody()),
+				Expiration: time.Duration(request.GetExpirationSeconds()),
+			})
+			if err != nil {
+				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+				return nil, err
+			}
+			prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+			return &pb.PublishResponse{Id: int32(id)}, nil
+		} else {
+			_, err := forwardPublishRequest(spanCtx, request, ip)
+			if err != nil {
+				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+				return nil, err
+			}
+			id, err := s.BrokerInstance.SaveMessage(spanCtx, broker.Message{
+				Body:       string(request.GetBody()),
+				Expiration: time.Duration(request.GetExpirationSeconds()),
+			}, request.GetSubject())
+			if err != nil {
+				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+				return nil, err
+			}
+			prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+			return &pb.PublishResponse{Id: int32(id)}, nil
+		}
+	}
+	return nil, nil
+
 }
 
 func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
@@ -83,7 +99,9 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	ctx := server.Context()
-	s.redisClient.SetPodIPBySubject(request.GetSubject(), os.Getenv("POD_IP"))
+	if _, err := s.redisClient.GetPodIPBySubjectAndIP(request.GetSubject(), os.Getenv("POD_IP")); err == nil {
+		s.redisClient.SetPodIPBySubjectAndIP(request.GetSubject()+os.Getenv("POD_IP"), os.Getenv("POD_IP"))
+	}
 	ch, err := s.BrokerInstance.Subscribe(spanCtx, request.GetSubject())
 	prm.ActiveSubscribers.Inc()
 	if err != nil {
@@ -124,6 +142,24 @@ func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb
 	return &pb.MessageResponse{Body: []byte(msg.Body)}, nil
 }
 
+func (s *BrokerServer) InternalPublish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
+	spanCtx, span := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "InternalPublish method")
+	defer span.End()
+	startTime := time.Now()
+	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
+	msg := broker.Message{
+		Body:       string(request.GetBody()),
+		Expiration: time.Duration(request.GetExpirationSeconds()),
+	}
+	id, err := s.BrokerInstance.PublishInternal(spanCtx, request.GetSubject(), msg)
+	if err != nil {
+		prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+		return nil, err
+	}
+	prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+	return &pb.PublishResponse{Id: int32(id)}, nil
+}
+
 func forwardPublishRequest(ctx context.Context, request *pb.PublishRequest, remoteServerAddr string) (*pb.PublishResponse, error) {
 	conn, err := grpc.Dial(remoteServerAddr+":8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -131,7 +167,7 @@ func forwardPublishRequest(ctx context.Context, request *pb.PublishRequest, remo
 	}
 	defer conn.Close()
 	remoteClient := pb.NewBrokerClient(conn)
-	remoteResponse, err := remoteClient.Publish(ctx, request)
+	remoteResponse, err := remoteClient.InternalPublish(ctx, request)
 	if err != nil {
 		return nil, err
 	}
