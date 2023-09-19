@@ -18,7 +18,7 @@ spec:
       containers:
       - name: broker
         imagePullPolicy: IfNotPresent
-        image: calgor/balebroker:v3
+        image: calgor/balebroker:v8
         ports:
         - containerPort: 8080
         env:
