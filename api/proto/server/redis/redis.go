@@ -54,3 +54,11 @@ func (s *RedisDB) GetPodsIPBySubject(subject string) ([]string, error) {
 	}
 	return ips, nil
 }
+
+func (s *RedisDB) DeletePodIPBySubjectAndIP(subject, ip string) error {
+	err := s.RedisClient.Del(context.Background(), subject+ip).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
