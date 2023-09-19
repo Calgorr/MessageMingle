@@ -131,11 +131,11 @@ func (m *Module) PublishInternal(ctx context.Context, subject string, msg broker
 	return msg.ID, nil
 }
 
-func (m *Module) SaveMessage(ctx context.Context, msg *broker.Message, subject string) (int, error) {
-	m.db.SetMessageID(ctx, msg, subject)
+func (m *Module) SaveMessage(ctx context.Context, msg broker.Message, subject string) (int, error) {
+	m.db.SetMessageID(ctx, &msg, subject)
 	wp.Submit(
 		func() {
-			m.db.SaveMessage(ctx, msg, subject)
+			m.db.SaveMessage(ctx, &msg, subject)
 		},
 	)
 	return msg.ID, nil
