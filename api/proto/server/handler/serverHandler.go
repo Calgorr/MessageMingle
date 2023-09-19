@@ -19,8 +19,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var ch chan broker.Message
-
 type BrokerServer struct {
 	pb.UnimplementedBrokerServer
 	BrokerInstance broker.Broker
@@ -85,35 +83,13 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	ctx := server.Context()
-	ip, err := s.redisClient.GetPodIPBySubject(request.GetSubject())
+	s.redisClient.SetPodIPBySubject(request.GetSubject(), os.Getenv("POD_IP"))
+	ch, err := s.BrokerInstance.Subscribe(spanCtx, request.GetSubject())
+	prm.ActiveSubscribers.Inc()
 	if err != nil {
-		s.redisClient.SetPodIPBySubject(request.GetSubject(), os.Getenv("POD_IP"))
-		ch, err := s.BrokerInstance.Subscribe(spanCtx, request.GetSubject())
-		prm.ActiveSubscribers.Inc()
-		if err != nil {
-			prm.MethodCount.WithLabelValues("Subscribe", "failed").Inc()
-			return err
-		}
-		for {
-			select {
-			case <-ctx.Done():
-				prm.ActiveSubscribers.Dec()
-				prm.MethodCount.WithLabelValues("Subscribe", "success").Inc()
-				return nil
-			case msg, open := <-ch:
-				if !open {
-					prm.ActiveSubscribers.Dec()
-					prm.MethodCount.WithLabelValues("Subscribe", "success").Inc()
-					return err
-				}
-				if err := server.Send(&pb.MessageResponse{Body: []byte(msg.Body)}); err != nil {
-					prm.MethodCount.WithLabelValues("Subscribe", "failed").Inc()
-					return err
-				}
-			}
-		}
+		prm.MethodCount.WithLabelValues("Subscribe", "failed").Inc()
+		return err
 	}
-	go forwardSubscribeRequest(spanCtx, request, ip)
 	for {
 		select {
 		case <-ctx.Done():
@@ -132,7 +108,6 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 			}
 		}
 	}
-
 }
 
 func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
@@ -161,29 +136,4 @@ func forwardPublishRequest(ctx context.Context, request *pb.PublishRequest, remo
 		return nil, err
 	}
 	return remoteResponse, nil
-}
-
-func forwardSubscribeRequest(ctx context.Context, request *pb.SubscribeRequest, remoteServerAddr string) (chan broker.Message, error) {
-	conn, err := grpc.Dial(remoteServerAddr+":8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	remoteClient := pb.NewBrokerClient(conn)
-	stream, err := remoteClient.Subscribe(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-	ch = make(chan broker.Message)
-	for {
-		resp, err := stream.Recv()
-		if err != nil {
-			close(ch)
-			break
-		}
-		ch <- broker.Message{
-			Body: string(resp.Body),
-		}
-	}
-	return ch, nil
 }
