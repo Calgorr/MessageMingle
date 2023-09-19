@@ -1,14 +1,11 @@
-FROM golang
-
-# bootstrap os
-RUN apt -y update
-
+FROM golang:1.21.1-alpine
 
 WORKDIR /home/app
 
 # copy project files & and go inside project directory
 COPY go.mod .
-RUN go mod tidy
+COPY go.sum .
+RUN go mod download -x
 
 COPY . .
 
