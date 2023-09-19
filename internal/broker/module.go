@@ -112,3 +112,21 @@ func (m *Module) Fetch(ctx context.Context, subject string, id int) (broker.Mess
 	}
 	return *msg, nil
 }
+
+func (m *Module) PublishInternal(ctx context.Context, subject string, msg broker.Message) (int, error) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "PublishInternal broker method")
+	defer globalSpan.End()
+	if m.isClosed {
+		return 0, broker.ErrUnavailable
+	}
+	var wg sync.WaitGroup
+	for _, listener := range m.subscribers[subject] {
+		wg.Add(1)
+		go func(listener chan broker.Message) {
+			defer wg.Done()
+			listener <- msg
+		}(listener)
+	}
+	wg.Wait()
+	return msg.ID, nil
+}
