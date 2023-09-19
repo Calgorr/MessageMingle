@@ -16,7 +16,7 @@ service Broker {
   // If the provided id is expired or not present,
   // should return InvalidArgument
   rpc Fetch(FetchRequest) returns (MessageResponse);
-  rpc InternalPublish(PublishRequest) returns (PublishResponse)
+  rpc InternalPublish(PublishRequest) returns (PublishResponse);
 }
 
 message PublishRequest {
