@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -26,6 +27,7 @@ type BrokerServer struct {
 }
 
 func StartServer() {
+	fmt.Println("moz")
 	go func() {
 		trace.PrometheusServerStart()
 	}()
@@ -35,6 +37,7 @@ func StartServer() {
 			log.Fatalf("Jaeger failed: %v", err)
 		}
 	}()
+	fmt.Println("moz1")
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -44,6 +47,7 @@ func StartServer() {
 		BrokerInstance: brk.NewModule(),
 		redisClient:    redis.NewModule(),
 	})
+	fmt.Println("moz12")
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("Server serve failed: %v", err)
 	}
@@ -89,7 +93,16 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 			return &pb.PublishResponse{Id: int32(id)}, nil
 		}
 	}
-	return nil, nil
+	id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), broker.Message{
+		Body:       string(request.GetBody()),
+		Expiration: time.Duration(request.GetExpirationSeconds()),
+	})
+	if err != nil {
+		prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+		return nil, err
+	}
+	prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+	return &pb.PublishResponse{Id: int32(id)}, nil
 
 }
 
