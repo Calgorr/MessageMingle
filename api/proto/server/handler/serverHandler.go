@@ -27,7 +27,6 @@ type BrokerServer struct {
 }
 
 func StartServer() {
-	fmt.Println("moz")
 	go func() {
 		trace.PrometheusServerStart()
 	}()
@@ -37,7 +36,6 @@ func StartServer() {
 			log.Fatalf("Jaeger failed: %v", err)
 		}
 	}()
-	fmt.Println("moz1")
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -47,13 +45,13 @@ func StartServer() {
 		BrokerInstance: brk.NewModule(),
 		redisClient:    redis.NewModule(),
 	})
-	fmt.Println("moz12")
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("Server serve failed: %v", err)
 	}
 }
 
 func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) (*pb.PublishResponse, error) {
+	fmt.Println("From pod " + os.Getenv("POD_IP"))
 	spanCtx, span := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "publish method")
 	defer span.End()
 	startTime := time.Now()
@@ -65,7 +63,7 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 	}
 	for _, ip := range ips {
 		if ip == os.Getenv("POD_IP") {
-			id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), broker.Message{
+			_, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), broker.Message{
 				Body:       string(request.GetBody()),
 				Expiration: time.Duration(request.GetExpirationSeconds()),
 			})
@@ -74,14 +72,15 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 				return nil, err
 			}
 			prm.MethodCount.WithLabelValues("Publish", "success").Inc()
-			return &pb.PublishResponse{Id: int32(id)}, nil
+			continue
 		} else {
+			fmt.Println("Publishing to " + ip + " From pod " + os.Getenv("POD_IP"))
 			_, err := forwardPublishRequest(spanCtx, request, ip)
 			if err != nil {
 				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
 				return nil, err
 			}
-			id, err := s.BrokerInstance.SaveMessage(spanCtx, broker.Message{
+			_, err = s.BrokerInstance.SaveMessage(spanCtx, broker.Message{
 				Body:       string(request.GetBody()),
 				Expiration: time.Duration(request.GetExpirationSeconds()),
 			}, request.GetSubject())
@@ -90,20 +89,22 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 				return nil, err
 			}
 			prm.MethodCount.WithLabelValues("Publish", "success").Inc()
-			return &pb.PublishResponse{Id: int32(id)}, nil
+			continue
 		}
 	}
-	id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), broker.Message{
-		Body:       string(request.GetBody()),
-		Expiration: time.Duration(request.GetExpirationSeconds()),
-	})
-	if err != nil {
-		prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
-		return nil, err
+	if len(ips) == 0 {
+		id, err := s.BrokerInstance.Publish(spanCtx, request.GetSubject(), broker.Message{
+			Body:       string(request.GetBody()),
+			Expiration: time.Duration(request.GetExpirationSeconds()),
+		})
+		if err != nil {
+			prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+			return nil, err
+		}
+		prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+		return &pb.PublishResponse{Id: int32(id)}, nil
 	}
-	prm.MethodCount.WithLabelValues("Publish", "success").Inc()
-	return &pb.PublishResponse{Id: int32(id)}, nil
-
+	return &pb.PublishResponse{Id: int32(0)}, nil
 }
 
 func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_SubscribeServer) error {
@@ -112,8 +113,8 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 	startTime := time.Now()
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	ctx := server.Context()
-	if _, err := s.redisClient.GetPodIPBySubjectAndIP(request.GetSubject(), os.Getenv("POD_IP")); err == nil {
-		s.redisClient.SetPodIPBySubjectAndIP(request.GetSubject()+os.Getenv("POD_IP"), os.Getenv("POD_IP"))
+	if _, err := s.redisClient.GetPodIPBySubjectAndIP(request.GetSubject(), os.Getenv("POD_IP")); err != nil {
+		s.redisClient.SetPodIPBySubjectAndIP(request.GetSubject(), os.Getenv("POD_IP"))
 	}
 	ch, err := s.BrokerInstance.Subscribe(spanCtx, request.GetSubject())
 	prm.ActiveSubscribers.Inc()
@@ -133,6 +134,7 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 				prm.MethodCount.WithLabelValues("Subscribe", "success").Inc()
 				return err
 			}
+			fmt.Println("From pod " + os.Getenv("POD_IP") + " Subject : " + request.GetSubject() + " message : " + msg.Body)
 			if err := server.Send(&pb.MessageResponse{Body: []byte(msg.Body)}); err != nil {
 				prm.MethodCount.WithLabelValues("Subscribe", "failed").Inc()
 				return err
@@ -142,6 +144,7 @@ func (s *BrokerServer) Subscribe(request *pb.SubscribeRequest, server pb.Broker_
 }
 
 func (s *BrokerServer) Fetch(ctx context.Context, request *pb.FetchRequest) (*pb.MessageResponse, error) {
+	fmt.Println("From pod " + os.Getenv("POD_IP"))
 	spanCtx, span := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "Fetch method")
 	defer span.End()
 	startTime := time.Now()
