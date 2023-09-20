@@ -49,13 +49,13 @@ func scyllaMigration(session *gocql.Session) {
 }
 
 func (s *scyllaDatabase) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
-	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SetMessageIDCassandra method")
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SetMessageIDScylla method")
 	defer globalSpan.End()
 	msg.ID = snowflake.GenerateSnowflake(ctx)
 }
 
 func (c *scyllaDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
-	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageCassandra method")
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageSyclla method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
 	query := c.session.Query(
@@ -69,7 +69,7 @@ func (c *scyllaDatabase) SaveMessage(ctx context.Context, msg *broker.Message, s
 }
 
 func (c *scyllaDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {
-	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "FetchCassandra method")
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "FetchSyclla method")
 	defer globalSpan.End()
 	var body string
 	var expiration time.Time
