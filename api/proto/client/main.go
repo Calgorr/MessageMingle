@@ -14,27 +14,38 @@ import (
 )
 
 func main() {
-	conn, err := grpc.Dial("localhost:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Fatalf("failed to dial: %v", err)
+	// conn, err := grpc.Dial("localhost:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// if err != nil {
+	// 	log.Fatalf("failed to dial: %v", err)
+	// }
+	// defer conn.Close()
+	// client := pb.NewBrokerClient(conn)
+	// ctx := context.Background()
+	// var wg sync.WaitGroup
+	// wg.Add(1)
+	// done := make(chan bool, 1)
+	// go func() {
+	// 	defer wg.Done()
+	// 	Publish(ctx, client, done)
+	// }()
+	// wg.Add(1)
+	// go func() {
+	// 	defer wg.Done()
+	// 	time.Sleep(20 * time.Minute)
+	// 	done <- true
+	// }()
+	// wg.Wait()
+	ticker := time.NewTicker(200 * time.Millisecond)
+	for {
+		select {
+		case <-context.Background().Done():
+			return
+		case <-ticker.C:
+			go func() {
+				go PublishNewConnection()
+			}()
+		}
 	}
-	defer conn.Close()
-	client := pb.NewBrokerClient(conn)
-	ctx := context.Background()
-	var wg sync.WaitGroup
-	wg.Add(1)
-	done := make(chan bool, 1)
-	go func() {
-		defer wg.Done()
-		Publish(ctx, client, done)
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		time.Sleep(20 * time.Minute)
-		done <- true
-	}()
-	wg.Wait()
 }
 
 func Publish(ctx context.Context, client pb.BrokerClient, done chan bool) {
@@ -89,4 +100,18 @@ func Fetch(ctx context.Context, client pb.BrokerClient) {
 		log.Fatalf("Fetch error: %v", err)
 	}
 	log.Println(msg)
+}
+
+func PublishNewConnection() {
+	conn, err := grpc.Dial("192.168.59.100:30456", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to dial: %v", err)
+	}
+	defer conn.Close()
+	client := pb.NewBrokerClient(conn)
+	ctx := context.Background()
+	_, err = client.Publish(ctx, &pb.PublishRequest{Subject: "test", Body: []byte("randomString(10)"), ExpirationSeconds: 10})
+	if err != nil {
+		log.Printf("Publish error: %v", err)
+	}
 }
