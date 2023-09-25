@@ -69,16 +69,15 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 			})
 			if err != nil {
 				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
-				return nil, err
+			} else {
+				prm.MethodCount.WithLabelValues("Publish", "success").Inc()
 			}
-			prm.MethodCount.WithLabelValues("Publish", "success").Inc()
 			continue
 		} else {
 			fmt.Println("Publishing to " + ip + " From pod " + os.Getenv("POD_IP"))
 			_, err := forwardPublishRequest(spanCtx, request, ip)
 			if err != nil {
 				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
-				return nil, err
 			}
 			_, err = s.BrokerInstance.SaveMessage(spanCtx, broker.Message{
 				Body:       string(request.GetBody()),
@@ -86,9 +85,9 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 			}, request.GetSubject())
 			if err != nil {
 				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
-				return nil, err
+			} else {
+				prm.MethodCount.WithLabelValues("Publish", "success").Inc()
 			}
-			prm.MethodCount.WithLabelValues("Publish", "success").Inc()
 			continue
 		}
 	}
