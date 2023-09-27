@@ -8,6 +8,7 @@ metadata:
   namespace: bootcamp
 
 spec:
+  clusterIP: None
   ports:
   - name : broker
     port: 8080
@@ -19,4 +20,3 @@ spec:
     protocol: TCP
   selector:
     app: broker
-  type: NodePort
