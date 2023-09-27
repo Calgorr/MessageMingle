@@ -14,17 +14,27 @@ import (
 )
 
 func main() {
-	ticker := time.NewTicker(200 * time.Millisecond)
-	for {
-		select {
-		case <-context.Background().Done():
-			return
-		case <-ticker.C:
-			go func() {
-				go PublishNewConnection()
-			}()
-		}
+	conn, err := grpc.Dial("localhost:10000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to dial: %v", err)
 	}
+	defer conn.Close()
+	client := pb.NewBrokerClient(conn)
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	done := make(chan bool, 1)
+	go func() {
+		defer wg.Done()
+		Publish(ctx, client, done)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		time.Sleep(20 * time.Minute)
+		done <- true
+	}()
+	wg.Wait()
 }
 
 func Publish(ctx context.Context, client pb.BrokerClient, done chan bool) {
