@@ -2,9 +2,9 @@ apiVersion : v1
 kind: Service
 
 metadata:
-  name: broker
+  name: broker-service
   labels:
-    app: broker
+    app: broker-service
   namespace: bootcamp
 
 spec:
