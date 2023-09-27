@@ -63,7 +63,7 @@ static_resources:
                 address:
                   socket_address:
                     address: broker-service.default.svc.cluster.local
-                    port_value: 8081
+                    port_value: 8080
       circuit_breakers:
         thresholds:
           - priority: DEFAULT
