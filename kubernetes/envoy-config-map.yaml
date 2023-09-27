@@ -40,7 +40,7 @@ data:
                                 prefix: /
                                 grpc:
                               route:
-                                cluster: alva_service
+                                cluster: broker
                           cors:
                             allow_origin_string_match:
                               - prefix: "*"
@@ -60,12 +60,12 @@ data:
                           "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
       clusters:
-        - name: alva_service
+        - name: broker
           type: STRICT_DNS
           connect_timeout: 100s
           lb_policy: round_robin
           load_assignment:
-            cluster_name: alva_service
+            cluster_name: broker
             endpoints:
               - lb_endpoints:
                 - endpoint:
