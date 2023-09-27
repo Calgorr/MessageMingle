@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"log"
 
 	"sync"
 	"therealbroker/internal/exporter"
@@ -24,15 +23,15 @@ const (
 	selectQuery = "SELECT body, expiration FROM broker.message_broker WHERE id = ? ALLOW FILTERING"
 )
 
-func NewScyllaDatabase() Database {
+func NewScyllaDatabase() (Database, error) {
 	cluster := gocql.NewCluster(contactPoints)
 	session, err := cluster.CreateSession()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	scyllaMigration(session)
 	cluster.Keyspace = keyspace
-	return &scyllaDatabase{session: session}
+	return &scyllaDatabase{session: session}, nil
 }
 
 func scyllaMigration(session *gocql.Session) {
@@ -54,7 +53,7 @@ func (s *scyllaDatabase) SetMessageID(ctx context.Context, msg *broker.Message, 
 	msg.ID = snowflake.GenerateSnowflake(ctx)
 }
 
-func (c *scyllaDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
+func (c *scyllaDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) (int, error) {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageSyclla method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
@@ -63,9 +62,9 @@ func (c *scyllaDatabase) SaveMessage(ctx context.Context, msg *broker.Message, s
 		msg.ID, subject, msg.Body, expirationDate,
 	)
 	if err := query.Exec(); err != nil {
-		panic(err)
+		return 0, err
 	}
-	return msg.ID
+	return msg.ID, nil
 }
 
 func (c *scyllaDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {

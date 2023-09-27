@@ -2,6 +2,7 @@ package broker
 
 import (
 	"context"
+	"log"
 	"os"
 	"sync"
 	"therealbroker/internal/exporter"
@@ -28,15 +29,19 @@ func NewModule() broker.Broker {
 		mainService := &Module{
 			subscribers: make(map[string][]chan broker.Message),
 		}
+		var err error
 		switch os.Getenv("DATABASE_TYPE") {
 		case "memory":
-			mainService.db = database.NewInMemory()
+			mainService.db, err = database.NewInMemory()
 		case "scylla":
-			mainService.db = database.NewScyllaDatabase()
+			mainService.db, err = database.NewScyllaDatabase()
 		case "cassandra":
-			mainService.db = database.NewCassandraDatabase()
+			mainService.db, err = database.NewCassandraDatabase()
 		case "postgres":
-			mainService.db = database.NewPostgresDatabase()
+			mainService.db, err = database.NewPostgresDatabase()
+		}
+		if err != nil {
+			log.Fatal(err)
 		}
 		return mainService
 	}

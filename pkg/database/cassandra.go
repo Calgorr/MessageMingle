@@ -23,14 +23,14 @@ var (
 	keyspace      = "broker"
 )
 
-func NewCassandraDatabase() Database {
+func NewCassandraDatabase() (Database, error) {
 	cluster := gocql.NewCluster(contactPoints)
 	cluster.Keyspace = keyspace
 	session, err := cluster.CreateSession()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &cassandraDatabase{session: session}
+	return &cassandraDatabase{session: session}, nil
 }
 
 func (c *cassandraDatabase) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
@@ -39,7 +39,7 @@ func (c *cassandraDatabase) SetMessageID(ctx context.Context, msg *broker.Messag
 	msg.ID = snowflake.GenerateSnowflake(ctx)
 }
 
-func (c *cassandraDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
+func (c *cassandraDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) (int, error) {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageCassandra method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
@@ -48,9 +48,9 @@ func (c *cassandraDatabase) SaveMessage(ctx context.Context, msg *broker.Message
 		msg.ID, subject, msg.Body, expirationDate,
 	)
 	if err := query.Exec(); err != nil {
-		panic(err)
+		return 0, err
 	}
-	return msg.ID
+	return msg.ID, nil
 }
 
 func (c *cassandraDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {

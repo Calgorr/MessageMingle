@@ -24,7 +24,7 @@ const (
 	dbname   = "broker"
 )
 
-func NewPostgresDatabase() Database {
+func NewPostgresDatabase() (Database, error) {
 	createDatabase()
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
@@ -33,14 +33,14 @@ func NewPostgresDatabase() Database {
 	db.SetMaxOpenConns(90)
 	db.SetMaxIdleConns(45)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	postgresMigration(db)
-	return &postgresDatabase{db: db}
+	return &postgresDatabase{db: db}, nil
 }
 
 func createDatabase() {
@@ -58,7 +58,7 @@ func createDatabase() {
 	}
 }
 
-func postgresMigration(db *sql.DB) {
+func postgresMigration(db *sql.DB) error {
 	_, err := db.Exec(`
         CREATE TABLE IF NOT EXISTS message_broker (
             id BIGSERIAL PRIMARY KEY,
@@ -68,15 +68,16 @@ func postgresMigration(db *sql.DB) {
         )
     `)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func (p *postgresDatabase) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
 
 }
 
-func (p *postgresDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
+func (p *postgresDatabase) SaveMessage(ctx context.Context, msg *broker.Message, subject string) (int, error) {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessagePostgres method")
 	defer globalSpan.End()
 	expirationDate := time.Now().Add(msg.Expiration)
@@ -85,9 +86,9 @@ func (p *postgresDatabase) SaveMessage(ctx context.Context, msg *broker.Message,
 		subject, msg.Body, expirationDate,
 	).Scan(&msg.ID)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
-	return msg.ID
+	return msg.ID, nil
 }
 
 func (p *postgresDatabase) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {
