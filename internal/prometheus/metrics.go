@@ -13,7 +13,7 @@ var (
 			Name: "grpc_server_method_count",
 			Help: "Count of successful/failed RPC calls by method",
 		},
-		[]string{"method", "status"},
+		[]string{"method", "status", "podIP"},
 	)
 
 	MethodDuration = prometheus.NewSummaryVec(prometheus.SummaryOpts{

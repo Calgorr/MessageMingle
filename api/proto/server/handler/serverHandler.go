@@ -58,7 +58,7 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 	defer prm.MethodDuration.WithLabelValues("Publish").Observe(time.Since(startTime).Seconds())
 	ips, err := s.redisClient.GetPodsIPBySubject(request.GetSubject())
 	if err != nil {
-		prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+		prm.MethodCount.WithLabelValues("Publish", "failed", os.Getenv("POD_IP")).Inc()
 		return nil, err
 	}
 	for _, ip := range ips {
@@ -68,25 +68,25 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 				Expiration: time.Duration(request.GetExpirationSeconds()),
 			})
 			if err != nil {
-				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+				prm.MethodCount.WithLabelValues("Publish", "failed", os.Getenv("POD_IP")).Inc()
 			} else {
-				prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+				prm.MethodCount.WithLabelValues("Publish", "success", os.Getenv("POD_IP")).Inc()
 			}
 			continue
 		} else {
 			fmt.Println("Publishing to " + ip + " From pod " + os.Getenv("POD_IP"))
 			_, err := forwardPublishRequest(spanCtx, request, ip)
 			if err != nil {
-				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+				prm.MethodCount.WithLabelValues("Publish", "failed", os.Getenv("POD_IP")).Inc()
 			}
 			_, err = s.BrokerInstance.SaveMessage(spanCtx, broker.Message{
 				Body:       string(request.GetBody()),
 				Expiration: time.Duration(request.GetExpirationSeconds()),
 			}, request.GetSubject())
 			if err != nil {
-				prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+				prm.MethodCount.WithLabelValues("Publish", "failed", os.Getenv("POD_IP")).Inc()
 			} else {
-				prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+				prm.MethodCount.WithLabelValues("Publish", "success", os.Getenv("POD_IP")).Inc()
 			}
 			continue
 		}
@@ -97,10 +97,10 @@ func (s *BrokerServer) Publish(ctx context.Context, request *pb.PublishRequest) 
 			Expiration: time.Duration(request.GetExpirationSeconds()),
 		})
 		if err != nil {
-			prm.MethodCount.WithLabelValues("Publish", "failed").Inc()
+			prm.MethodCount.WithLabelValues("Publish", "failed", os.Getenv("POD_IP")).Inc()
 			return nil, err
 		}
-		prm.MethodCount.WithLabelValues("Publish", "success").Inc()
+		prm.MethodCount.WithLabelValues("Publish", "success", os.Getenv("POD_IP")).Inc()
 		return &pb.PublishResponse{Id: int32(id)}, nil
 	}
 	return &pb.PublishResponse{Id: int32(0)}, nil
