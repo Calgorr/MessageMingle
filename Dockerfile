@@ -1,17 +1,8 @@
-FROM golang
-
-# bootstrap os
-RUN apt -y update
-
-# install protoc
-RUN apt install -y protobuf-compiler
+FROM golang:1.21.1-alpine
 
 WORKDIR /home/app
 
 # copy project files & and go inside project directory
-COPY go.mod .
-RUN go mod tidy
-
 COPY . .
-
+RUN go mod tidy
 CMD go run ./api/proto/server/main.go

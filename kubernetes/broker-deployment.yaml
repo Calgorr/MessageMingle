@@ -1,4 +1,4 @@
-apiVersion : apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: broker
@@ -17,15 +17,22 @@ spec:
     spec:
       containers:
       - name: broker
-        image: calgor/balebroker:v1
+        imagePullPolicy: IfNotPresent
+        image: calgor/balebroker:v17
         ports:
         - containerPort: 8080
         env:
           - name: DATABASE_TYPE
             value: "scylla"
-        command:
-          - "/bin/bash"
-          - "-c"
-          - "./scripts/wait-for-it.sh -t 0 scylla:9042 && go run ./api/proto/server/main.go"
-  replicas: 1
-    
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        resources:
+          limits:
+            cpu: "0.3"
+            memory: "512Mi"
+          requests:
+            cpu: "0.1"
+            memory: "256Mi"
+  replicas: 2

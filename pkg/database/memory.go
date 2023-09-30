@@ -15,10 +15,10 @@ type in_memory struct {
 	sync.RWMutex
 }
 
-func NewInMemory() Database {
+func NewInMemory() (Database, error) {
 	return &in_memory{
 		messages: make(map[string]map[int]*broker.Message),
-	}
+	}, nil
 }
 
 func (i *in_memory) SetMessageID(ctx context.Context, msg *broker.Message, subject string) {
@@ -32,7 +32,7 @@ func (i *in_memory) SetMessageID(ctx context.Context, msg *broker.Message, subje
 	msg.ID = len(i.messages[subject]) + 1
 }
 
-func (i *in_memory) SaveMessage(ctx context.Context, msg *broker.Message, subject string) int {
+func (i *in_memory) SaveMessage(ctx context.Context, msg *broker.Message, subject string) (int, error) {
 	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "SaveMessageInMemory method")
 	defer globalSpan.End()
 	go func() {
@@ -45,7 +45,7 @@ func (i *in_memory) SaveMessage(ctx context.Context, msg *broker.Message, subjec
 	i.Lock()
 	i.messages[subject][msg.ID] = msg
 	i.Unlock()
-	return msg.ID
+	return msg.ID, nil
 }
 
 func (i *in_memory) FetchMessage(ctx context.Context, id int, subject string) (*broker.Message, error) {

@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	conn, err := grpc.Dial("localhost:8080", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial("localhost:10000", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("failed to dial: %v", err)
 	}
@@ -39,7 +39,7 @@ func main() {
 
 func Publish(ctx context.Context, client pb.BrokerClient, done chan bool) {
 	var wg sync.WaitGroup
-	ticker := time.NewTicker(20 * time.Microsecond) // 20k msg/s 1,2M msg/min 24M msg in 20 min
+	ticker := time.NewTicker(20 * time.Microsecond)
 	for {
 		select {
 		case <-ctx.Done():
@@ -89,4 +89,18 @@ func Fetch(ctx context.Context, client pb.BrokerClient) {
 		log.Fatalf("Fetch error: %v", err)
 	}
 	log.Println(msg)
+}
+
+func PublishNewConnection() {
+	conn, err := grpc.Dial("192.168.59.100:30456", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to dial: %v", err)
+	}
+	defer conn.Close()
+	client := pb.NewBrokerClient(conn)
+	ctx := context.Background()
+	_, err = client.Publish(ctx, &pb.PublishRequest{Subject: "test", Body: []byte("randomString(10)"), ExpirationSeconds: 10})
+	if err != nil {
+		log.Printf("Publish error: %v", err)
+	}
 }

@@ -40,4 +40,6 @@ type Broker interface {
 	// Fetch enables us to retrieve a message that is already published, if
 	// it's not expired yet.
 	Fetch(ctx context.Context, subject string, id int) (Message, error)
+	PublishInternal(ctx context.Context, subject string, msg Message) (int, error)
+	SaveMessage(ctx context.Context, msg Message, subject string) (int, error)
 }

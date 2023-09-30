@@ -2,12 +2,13 @@ apiVersion : v1
 kind: Service
 
 metadata:
-  name: broker
+  name: broker-service
   labels:
-    app: broker
+    app: broker-service
   namespace: bootcamp
 
 spec:
+  clusterIP: None
   ports:
   - name : broker
     port: 8080
@@ -19,4 +20,3 @@ spec:
     protocol: TCP
   selector:
     app: broker
-  type: NodePort

@@ -2,6 +2,7 @@ package broker
 
 import (
 	"context"
+	"log"
 	"os"
 	"sync"
 	"therealbroker/internal/exporter"
@@ -28,15 +29,19 @@ func NewModule() broker.Broker {
 		mainService := &Module{
 			subscribers: make(map[string][]chan broker.Message),
 		}
+		var err error
 		switch os.Getenv("DATABASE_TYPE") {
 		case "memory":
-			mainService.db = database.NewInMemory()
+			mainService.db, err = database.NewInMemory()
 		case "scylla":
-			mainService.db = database.NewScyllaDatabase()
+			mainService.db, err = database.NewScyllaDatabase()
 		case "cassandra":
-			mainService.db = database.NewCassandraDatabase()
+			mainService.db, err = database.NewCassandraDatabase()
 		case "postgres":
-			mainService.db = database.NewPostgresDatabase()
+			mainService.db, err = database.NewPostgresDatabase()
+		}
+		if err != nil {
+			log.Fatal(err)
 		}
 		return mainService
 	}
@@ -111,4 +116,32 @@ func (m *Module) Fetch(ctx context.Context, subject string, id int) (broker.Mess
 		return broker.Message{}, broker.ErrExpiredID
 	}
 	return *msg, nil
+}
+
+func (m *Module) PublishInternal(ctx context.Context, subject string, msg broker.Message) (int, error) {
+	_, globalSpan := otel.Tracer(exporter.DefaultServiceName).Start(ctx, "PublishInternal broker method")
+	defer globalSpan.End()
+	if m.isClosed {
+		return 0, broker.ErrUnavailable
+	}
+	var wg sync.WaitGroup
+	for _, listener := range m.subscribers[subject] {
+		wg.Add(1)
+		go func(listener chan broker.Message) {
+			defer wg.Done()
+			listener <- msg
+		}(listener)
+	}
+	wg.Wait()
+	return msg.ID, nil
+}
+
+func (m *Module) SaveMessage(ctx context.Context, msg broker.Message, subject string) (int, error) {
+	m.db.SetMessageID(ctx, &msg, subject)
+	wp.Submit(
+		func() {
+			m.db.SaveMessage(ctx, &msg, subject)
+		},
+	)
+	return msg.ID, nil
 }
