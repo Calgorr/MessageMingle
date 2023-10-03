@@ -1,28 +1,76 @@
-# Welcome project for newcomers!
+# MessageMingle: Simple Message Broker 
 
-# Introduction
+MessageMingle is a fast and simple gRPC based broker. It's a mini practical project to sail through the Golang and most common used tools and frameworks including:
 
-In this project you have to implement a message broker, based on `broker.Broker`
-interface. There are unit tests to specify requirements and also validate your implementation.
+- gRPC/Protobuf
+- Concurrent programming
+- Storing data using Cassandra//Scylla/Postrgres/Redis
+- Load Testing using simple golang client
+- Unit Testing
+- Monitoring using Prometheus and Grafana
+- Tracing using Jaeger
+- Rate Limiting using envoy
+- Load balancing using envoy
+- Deploying using docker and kubernetes (helm)
+- Creating helm chart for easy deployment
+- ServerCluster for high availability
 
-# Roadmap
+<p align="center">
+  <a href="https://skillicons.dev">
+    <img src="https://skillicons.dev/icons?i=go,prometheus,grafana,postgres,cassandra,redis,kubernetes,docker" />
+  </a>
+</p>
 
-- [ ] Implement `broker.Broker` interface and pass all tests
-- [ ] Add basic logs and prometheus metrics
-  - Metrics for each RPCs:
-    - `method_count` to show count of failed/successful RPC calls
-    - `method_duration` for latency of each call, in 99, 95, 50 quantiles
-    - `active_subscribers` to display total active subscriptions
-  - Env metrics:
-    - Metrics for your application memory, cpu load, cpu utilization, GCs
-- [ ] Implement gRPC API for the broker and main functionalities
-- [ ] Create _dockerfile_ and _docker-compose_ files for your deployment
-- [ ] Deploy your app with the previous `docker-compose` on a remote machine
-- [ ] Deploy your app on K8
 
-# Phase 2 Evaluation
+Features:
+- Ready to be deployed on kubernetes
+- Prometheus metrics
+- Handling up to 34k requests per second
+- All message get stored in DB
 
-We run our gRPC client that implemented the `broker.proto` against your deployed broker application.
+## RPCs Description
+- Publish Requst
+```protobuf
+message PublishRequest {
+  string subject = 1;
+  bytes body = 2;
+  int32 expirationSeconds = 3;
+}
+```
+- Fetch Request
+```protobuf
+message FetchRequest {
+  string subject = 1;
+  int32 id = 2;
+}
+```
+- Subscribe Request
+```protobuf
+message SubscribeRequest {
+  string subject = 1;
+}
+```
+- RPC Service
+```protobuf
+service Broker {
+  rpc Publish (PublishRequest) returns (PublishResponse);
+  rpc Subscribe(SubscribeRequest) returns (stream MessageResponse);
+  rpc Fetch(FetchRequest) returns (MessageResponse);
+}
+```
 
-As it should function properly ( like the unit tests ), we expect the provided metrics to display a good observation, and if
-anything unexpected happened, you could diagnose your app, using the logs and other tools.
+# Deployment
+## Prerequisites
+- Docker
+- Kubernetes
+- Helm
+
+## Docker
+```shell
+docker-compose up broker
+```
+
+## Kubernetes
+```shell
+helm install MessageMingle ./MessageMingle
+```
