@@ -72,5 +72,5 @@ docker-compose up broker
 
 ## Kubernetes
 ```shell
-helm install MessageMingle ./MessageMingle
+helm install MessageMingle ./MessageMingle --values ./MessageMingle/values.yaml
 ```
