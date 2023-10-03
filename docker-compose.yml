@@ -6,7 +6,7 @@ services:
     image: broker
     ports:
       - "8080:8080"
-    entrypoint: /bin/bash -c "./scripts/wait-for-it.sh -t 0 scylla:9042 && go run ./api/proto/server/main.go" # change the host and port to the name of the database container
+    entrypoint: /bin/sh -c "./scripts/wait-for-it.sh -t 0 scylla:9042" # change the host and port to the name of the database container
     restart: on-failure
     environment:
       - DATABASE_TYPE=scylla # change the host and port to the name of the database container
@@ -63,7 +63,7 @@ services:
     hostname: prometheus
     image: prom/prometheus:latest
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     networks:
@@ -84,7 +84,7 @@ services:
     depends_on:
       - broker
     volumes:
-      - ./envoy-proxy-ratelimit.yaml:/etc/envoy/envoy.yaml
+      - ./configs/rateLimit/envoy-proxy-ratelimit.yaml:/etc/envoy/envoy.yaml
     networks:
       - mynetwork
 
