@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cassandra
+  labels:
+    app: cassandra
+  namespace: {{ .Values.Namespace }}
+spec:
+  ports:
+  - name : cassandra
+    port: 9042
+    targetPort: 9042
+    protocol: TCP
+  selector:
+    app: cassandra
+  type: NodePort

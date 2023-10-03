@@ -1,0 +1,22 @@
+apiVersion : v1
+kind: Service
+
+metadata:
+  name: broker-service
+  labels:
+    app: broker-service
+  namespace: {{ .Values.Namespace }}
+
+spec:
+  clusterIP: None
+  ports:
+  - name : {{ .Values.Name }}
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name : metrics
+    port: 9091
+    targetPort: 9091
+    protocol: TCP
+  selector:
+    app: {{ .Values.Name }}

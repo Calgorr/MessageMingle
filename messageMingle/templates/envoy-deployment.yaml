@@ -1,0 +1,31 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: envoy
+  labels:
+    app: envoy
+  namespace: {{ .Values.Namespace }}
+
+spec:
+  selector:
+    matchLabels:
+      app: envoy
+  template:
+    metadata:
+      labels:
+        app: envoy
+    spec:
+      containers:
+      - name: envoy
+        image: envoy/dev-1548b48e443481ab3801fab8aa5f1bc82964ca8c
+        ports:
+        - containerPort: 10000
+        volumeMounts:
+            - name: envoy-config-volume
+              mountPath: /etc/envoy/
+      volumes:
+        - name: envoy-config-volume
+          configMap:
+            defaultMode: 420
+            name: envoy
+  replicas: 1

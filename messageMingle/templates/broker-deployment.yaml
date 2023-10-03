@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.Name }}
+  labels:
+    app: {{ .Values.Name }}
+  namespace: {{ .Values.Namespace }}
+
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.Name }}
+    spec:
+      containers:
+      - name: {{ .Values.Name }}
+        imagePullPolicy: {{ .Values.AppImage.pullPolicy }}
+        image: "{{ .Values.AppImage.name }}:{{ .Values.AppImage.tag }}"
+        ports:
+        - containerPort: 8080
+        env:
+          - name: DATABASE_TYPE
+            value: "scylla"
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        resources:
+          limits:
+            cpu: "0.3"
+            memory: "512Mi"
+          requests:
+            cpu: "0.1"
+            memory: "256Mi"
+  replicas: 2
