@@ -4,7 +4,7 @@ MessageMingle is a fast and simple gRPC based broker. It's a mini practical proj
 
 - gRPC/Protobuf
 - Concurrent programming
-- Storing data using Cassandra//Scylla/Postrgres/Redis
+- Storing data using Cassandra/Scylla/Postrgres/Redis
 - Load Testing using simple golang client
 - Unit Testing
 - Monitoring using Prometheus and Grafana
